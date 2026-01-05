@@ -262,12 +262,21 @@ def upload_file():
 
 @app.route('/api/search', methods=['POST'])
 def search():
-    """Поиск по векторной базе"""
+    """Поиск по векторной базе с учетом истории чата"""
     data = request.json
     query = data.get('query', '')
+    history = data.get('history', [])  # История чата
     
     if not query:
         return jsonify({'error': 'Запрос пустой'}), 400
+    
+    # Если есть история - добавляем контекст предыдущего вопроса
+    if history:
+        # Берем последний вопрос-ответ для контекста
+        last_qa = history[-1]
+        query_with_context = f"Предыдущий вопрос: {last_qa['question']}\nПредыдущий ответ: {last_qa['answer'][:300]}...\n\nТекущий вопрос: {query}"
+    else:
+        query_with_context = query
     
     # Поиск документов
     results = search_documents(query, limit=5)
@@ -292,8 +301,8 @@ def search():
         'score': r["score"]
     } for r in results]
     
-    # Генерируем ответ
-    answer = ask_llm(query, context)
+    # Генерируем ответ с учетом истории
+    answer = ask_llm(query_with_context, context)
     
     return jsonify({
         'answer': answer,

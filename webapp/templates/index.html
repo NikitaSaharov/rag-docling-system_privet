@@ -372,6 +372,7 @@
     
     <script>
         let isLoading = false;
+        let chatHistory = []; // История чата (последние 3 пары вопрос-ответ)
         
         // Поиск
         document.getElementById('sendBtn').addEventListener('click', search);
@@ -401,10 +402,14 @@
             const loadingId = addLoadingMessage();
             
             try {
+                // Отправляем запрос с историей чата
                 const response = await fetch('/api/search', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({query})
+                    body: JSON.stringify({
+                        query: query,
+                        history: chatHistory.slice(-3) // Последние 3 пары
+                    })
                 });
                 
                 const data = await response.json();
@@ -414,6 +419,17 @@
                 
                 // Добавляем ответ
                 addMessage('assistant', data.answer, data.sources);
+                
+                // Сохраняем в историю
+                chatHistory.push({
+                    question: query,
+                    answer: data.answer
+                });
+                
+                // Оставляем только последние 5 пар
+                if (chatHistory.length > 5) {
+                    chatHistory = chatHistory.slice(-5);
+                }
             } catch (error) {
                 document.getElementById(loadingId).remove();
                 addMessage('assistant', 'Ошибка: ' + error.message);
