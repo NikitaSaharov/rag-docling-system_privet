@@ -1,0 +1,84 @@
+# Переменные окружения и секреты - ВАЖНО!
+.env
+.env.local
+.env.production
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Docker volumes и данные (содержат векторную базу)
+qdrant_data/
+ollama_data/
+postgres_data/
+redis_data/
+nginx_cache/
+
+# Вложенные git репозитории
+docling_git/
+
+# Документы (КОНФИДЕНЦИАЛЬНЫЕ!)
+documents/*.pdf
+documents/*.docx
+documents/*.doc
+documents/*.pptx
+!documents/README.md
+
+# Обработанные файлы
+shared/processed/*.md
+shared/processed/*.txt
+output/*.md
+output/*.txt
+
+# Backup файлы
+*.tar.gz
+*.sql.gz
+*.backup
+backups/
+
+# SSL сертификаты (СЕКРЕТНЫЕ!)
+nginx/ssl/*.pem
+nginx/ssl/*.key
+*.crt
+*.csr
+
+# Логи
+*.log
+logs/
+*.log.*
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+tmp/
+temp/
+*.tmp
+
+# Node modules
+node_modules/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
