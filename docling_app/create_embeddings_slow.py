@@ -33,9 +33,30 @@ def get_embedding(text, model="nomic-embed-text", retries=3):
                 print(f"    ❌ Ошибка после {retries} попыток")
                 return None
 
-def chunk_text(text, chunk_size=200, overlap=30):
-    """Разбивает текст на чанки"""
+def get_optimal_chunk_size(text):
+    """Определяет оптимальный размер чанка в зависимости от размера документа"""
+    word_count = len(text.split())
+    
+    if word_count < 5000:
+        # Маленькие документы - мелкие чанки для точности
+        return 100, 20
+    elif word_count < 20000:
+        # Средние документы
+        return 150, 25
+    else:
+        # Большие документы
+        return 200, 30
+
+def chunk_text(text, chunk_size=None, overlap=None):
+    """Разбивает текст на чанки с адаптивным размером"""
     words = text.split()
+    
+    # Автоматическое определение размера
+    if chunk_size is None or overlap is None:
+        chunk_size, overlap = get_optimal_chunk_size(text)
+        print(f"📊 Размер документа: {len(words)} слов")
+        print(f"🔧 Авто-подбор: chunk_size={chunk_size}, overlap={overlap}")
+    
     chunks = []
     for i in range(0, len(words), chunk_size - overlap):
         chunk = " ".join(words[i:i + chunk_size])

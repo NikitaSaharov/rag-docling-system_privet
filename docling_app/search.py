@@ -26,22 +26,48 @@ def get_embedding(text: str, model: str = "nomic-embed-text"):
     return response.json()["embedding"]
 
 def search(query: str, limit: int = 5):
-    """Поиск похожих документов"""
+    """Гибридный поиск: semantic + keyword + boosting"""
     print(f"\n🔍 Поиск: {query}\n")
     
+    query_lower = query.lower()
+    
+    # Проверяем упоминание документа
+    doc_filters = {
+        'справочник': 'Справочник Мудрого Руководителя',
+        'золотой стандарт': 'Золотой Стандарт Аудита',
+        'директор': 'Директор'
+    }
+    
+    search_filter = None
+    for keyword, doc_pattern in doc_filters.items():
+        if keyword in query_lower:
+            search_filter = {
+                "must": [{
+                    "key": "filename",
+                    "match": {"text": doc_pattern}
+                }]
+            }
+            print(f"🎯 Фильтр по документу: {doc_pattern}")
+            break
+    
     # Получаем эмбеддинг запроса
-    print("⏳ Создание эмбеддинга запроса...")
+    print("⌛ Создание эмбеддинга запроса...")
     query_embedding = get_embedding(query)
     
     # Ищем в Qdrant
-    print("⏳ Поиск в векторной базе...\n")
+    print("⌛ Поиск в векторной базе...\n")
+    
+    search_params = {
+        "vector": query_embedding,
+        "limit": limit * 2 if not search_filter else limit,
+        "with_payload": True
+    }
+    if search_filter:
+        search_params["filter"] = search_filter
+    
     response = requests.post(
         f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search",
-        json={
-            "vector": query_embedding,
-            "limit": limit,
-            "with_payload": True
-        },
+        json=search_params,
         timeout=30
     )
     
@@ -50,6 +76,34 @@ def search(query: str, limit: int = 5):
     if not results:
         print("❌ Ничего не найдено")
         return []
+    
+    # Keyword matching + boosting
+    query_lower = query.lower()
+    keyword_boosts = {
+        'справочник': ('Справочник', 0.3),
+        'золотой стандарт': ('Золотой Стандарт', 0.3),
+        'ссп': ('Справочник', 0.2),
+        'пир': ('ПИР', 0.05),
+        'директор': ('Директор', 0.1)
+    }
+    
+    # Re-ranking
+    for result in results:
+        filename = result["payload"]["filename"]
+        total_chunks = result["payload"]["total_chunks"]
+        
+        # Keyword boost
+        for keyword, (file_pattern, boost) in keyword_boosts.items():
+            if keyword in query_lower and file_pattern in filename:
+                result["score"] += boost
+        
+        # Small doc boost (<100 chunks)
+        if total_chunks < 100:
+            result["score"] += 0.05
+    
+    # Пересортировка
+    results.sort(key=lambda x: x["score"], reverse=True)
+    results = results[:limit]
     
     # Выводим результаты
     print(f"✅ Найдено результатов: {len(results)}\n")
@@ -69,25 +123,22 @@ def search(query: str, limit: int = 5):
 
 def ask_llm(query: str, context: str, model: str = "deepseek"):
     """Спрашивает LLM с контекстом"""
-    system_prompt = """Ты - помощник по анализу документов.
+    system_prompt = """Ты - эксперт-аналитик документов. Твоя задача - давать РАЗВЕРНУТЫЕ и ТОЧНЫЕ ответы.
 
-ПРАВИЛА ОТВЕТА:
-1. Пиши КРАТКО и ПО СУТИ - максимум 5-7 предложений
-2. Используй ТОЛЬКО информацию из контекста (никаких додомыслов!)
-3. Пиши на чистом русском, без иностранных слов
-4. НЕ ИСПОЛЬЗУЙ markdown символы (*, #, ###, **)
-5. Разбивай ответ на короткие абзацы (2-3 строки)
-6. Для списков используй тире и цифры (1., 2., -)
-7. В конце предложи 2-3 уточняющих вопроса
+КРИТИЧЕСКИ ВАЖНО - ИЗБЕГАЙ ГАЛЛЮЦИНАЦИЙ:
+1. Используй ТОЛЬКО информацию из контекста
+2. Если информации нет - так и скажи, НЕ ДОМЫШЛЯЙ
+3. Цитируй точные формулировки из документа
+4. Указывай источник (из какого документа)
 
 ФОРМАТ ОТВЕТА:
-Короткий ответ на вопрос.
-
-Основные пункты с пояснениями.
-
-Уточняющие вопросы:
-- Вопрос 1?
-- Вопрос 2?"""
+1. Полный развернутый ответ (10-15 предложений)
+2. Раскрывай все аспекты вопроса
+3. Приводи примеры и детали из контекста
+4. Структурируй ответ по пунктам
+5. НЕ ИСПОЛЬЗУЙ markdown (*, #, **)
+6. Используй тире и цифры для списков
+7. В конце: 2-3 уточняющих вопроса"""
     
     user_prompt = f"""Контекст:
 {context}
@@ -119,16 +170,19 @@ def ask_llm(query: str, context: str, model: str = "deepseek"):
     except Exception as e:
         print(f"⚠️  Ошибка DeepSeek API: {e}")
         print("🔄 Fallback на Ollama...\n")
-        response = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={
-                "model": "llama3.2",
-                "prompt": f"{system_prompt}\n\n{user_prompt}",
-                "stream": False
-            },
-            timeout=120
-        )
-        answer = response.json()["response"]
+        try:
+            response = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={
+                    "model": "llama3.2",
+                    "prompt": f"{system_prompt}\n\n{user_prompt}",
+                    "stream": False
+                },
+                timeout=180
+            )
+            answer = response.json()["response"]
+        except Exception as e2:
+            answer = f"Ошибка генерации ответа: {str(e2)}"
     
     print(f"💬 Ответ:\n{answer}\n")
     return answer
@@ -141,7 +195,7 @@ if __name__ == "__main__":
     query = " ".join(sys.argv[1:])
     
     # Ищем релевантные документы
-    results = search(query, limit=3)
+    results = search(query, limit=10)
     
     if results:
         # Объединяем контекст
