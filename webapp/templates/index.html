@@ -273,8 +273,9 @@
             padding: 16px 24px;
             border-top: 1px solid #e5e7eb;
             background: white;
-            position: relative;
-            z-index: 100;
+            position: sticky;
+            bottom: 0;
+            z-index: 1000;
         }
         
         .input-wrapper {
@@ -401,6 +402,7 @@
             
             .input-container {
                 padding: 12px;
+                padding-bottom: calc(12px + env(safe-area-inset-bottom));
             }
             
             .message {
