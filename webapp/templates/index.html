@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Assistant</title>
+    <title>VectorStom</title>
     <style>
         * {
             margin: 0;
@@ -26,6 +26,50 @@
             display: flex;
             flex-direction: column;
             padding: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .menu-toggle:hover {
+            background: #5568d3;
+        }
+        
+        .menu-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        .menu-toggle span {
+            width: 20px;
+            height: 2.5px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
         }
         
         .sidebar-header {
@@ -104,6 +148,13 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 12px;
+        }
+        
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         
         .chat-title {
@@ -313,9 +364,75 @@
         .empty-text {
             font-size: 15px;
         }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 1000;
+                transform: translateX(-100%);
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .menu-toggle {
+                display: flex;
+            }
+            
+            .overlay.active {
+                display: block;
+            }
+            
+            .chat-header {
+                padding: 16px;
+            }
+            
+            .messages-container {
+                padding: 16px;
+            }
+            
+            .input-container {
+                padding: 12px;
+            }
+            
+            .message {
+                gap: 12px;
+            }
+            
+            .message-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 16px;
+            }
+            
+            .message-text {
+                font-size: 14px;
+            }
+            
+            .empty-state {
+                padding: 24px;
+            }
+            
+            .empty-icon {
+                font-size: 36px;
+            }
+            
+            .empty-title {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+    
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header">Документы</div>
@@ -337,7 +454,14 @@
     <!-- Main Chat Area -->
     <div class="main-container">
         <div class="chat-header">
-            <div class="chat-title">AI Assistant</div>
+            <div class="chat-header-left">
+                <button class="menu-toggle" id="menuToggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="chat-title">VectorStom</div>
+            </div>
             <div class="status-indicator">
                 <div class="status-dot"></div>
                 <span>Online</span>
@@ -373,6 +497,26 @@
     <script>
         let isLoading = false;
         let chatHistory = []; // История чата (последние 3 пары вопрос-ответ)
+        
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('overlay');
+        
+        function toggleMenu() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+        
+        menuToggle.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', toggleMenu);
+        
+        // Закрываем меню при клике на документ
+        document.getElementById('documentsList').addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && e.target.closest('.doc-item')) {
+                toggleMenu();
+            }
+        });
         
         // Поиск
         document.getElementById('sendBtn').addEventListener('click', search);

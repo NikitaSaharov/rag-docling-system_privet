@@ -62,7 +62,7 @@ services:
       - ./documents:/documents
     env_file:
       - .env.local
-    command: bash -c "apt-get update && apt-get install -y libgl1 libglib2.0-0 && pip install docling requests && tail -f /dev/null"
+    command: tail -f /dev/null
     networks:
       - docling-network
 

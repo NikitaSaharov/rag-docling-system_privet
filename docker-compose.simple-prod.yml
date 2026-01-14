@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Nginx - reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: vectorstom-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-simple.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - webapp
+    networks:
+      - frontend
+
+  # Веб-приложение
+  webapp:
+    build: ./webapp
+    container_name: vectorstom-webapp
+    restart: always
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_URL=http://ollama:11434
+      - POLZA_API_KEY=${POLZA_API_KEY}
+    depends_on:
+      - qdrant
+      - ollama
+    networks:
+      - frontend
+      - backend
+
+  # Qdrant векторная БД
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: vectorstom-qdrant
+    restart: always
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - backend
+
+  # Ollama для эмбеддингов
+  ollama:
+    image: ollama/ollama:latest
+    container_name: vectorstom-ollama
+    restart: always
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - backend
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  qdrant_data:
+    driver: local
+  ollama_data:
+    driver: local
