@@ -38,14 +38,14 @@ def get_optimal_chunk_size(text):
     word_count = len(text.split())
     
     if word_count < 5000:
-        # Маленькие документы - мелкие чанки для точности
-        return 100, 20
+        # Маленькие документы - оптимально для формул
+        return 300, 60
     elif word_count < 20000:
         # Средние документы
-        return 150, 25
+        return 350, 70
     else:
         # Большие документы
-        return 200, 30
+        return 300, 60
 
 def chunk_text(text, chunk_size=None, overlap=None):
     """Разбивает текст на чанки с адаптивным размером"""

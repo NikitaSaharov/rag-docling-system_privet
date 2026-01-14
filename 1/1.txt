@@ -1,0 +1,24 @@
+# Создать .env файл с API ключом
+cat > .env << 'EOF'
+POLZA_API_KEY=ak_VdTnWuDz1CZGLuiiRH5qt34PlZQYx0NqROscaGPneIY
+EOF
+
+# Загрузить переменные
+export $(cat .env | xargs)
+
+# Проверить
+echo $POLZA_API_KEY
+
+
+
+
+
+
+# Создать Docker volume для Qdrant
+docker volume create vectorstom_qdrant_data
+
+# Восстановить векторы из бэкапа
+docker run --rm \
+  -v vectorstom_qdrant_data:/qdrant/storage \
+  -v /root/vectorstom/qdrant-backup.tar.gz:/backup.tar.gz \
+  alpine sh -c "cd / && tar -xzf /backup.tar.gz"

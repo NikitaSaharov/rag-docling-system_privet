@@ -27,8 +27,10 @@ def get_embedding(text: str, model: str = "nomic-embed-text"):
         print(f"Ошибка получения эмбеддинга: {e}")
         return None
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
-    """Разбивает текст на чанки с перекрытием"""
+def chunk_text(text: str, chunk_size: int = 350, overlap: int = 70):
+    """Разбивает текст на чанки с перекрытием (оптимизировано для формул)"""
+    # Уменьшенный размер для лучшего сохранения формул целиком
+    # Больший overlap для лучшего покрытия формул на границах чанков
     words = text.split()
     chunks = []
     
