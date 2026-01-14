@@ -73,12 +73,18 @@ docker compose cp qdrant:/tmp/qdrant-backup.tar.gz ./qdrant-backup.tar.gz
 scp qdrant-backup.tar.gz root@<IP>:/root/vectorstom/
 ```
 
-#### Вариант Б: Загрузить из облачного хранилища
-Если вы выгрузили бэкап в облако (Google Drive, Яндекс.Диск и т.д.):
+#### Вариант Б: Загрузить с Яндекс.Диска (РЕКОМЕНДУЕТСЯ)
+Бэкап уже загружен на Яндекс.Диск!
+
 ```bash
-# Получите прямую ссылку и скачайте
-wget "<ССЫЛКА_НА_БЭКАП>" -O qdrant-backup.tar.gz
+# Автоматическое скачивание с Яндекс.Диска (одна строка)
+curl -s "https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=https://disk.yandex.ru/d/8-wECwCh76azSg" | grep -o '"href":"[^"]*"' | sed 's/"href":"//;s/"//' | sed 's/\\//g' | xargs wget -O qdrant-backup.tar.gz
+
+# Проверьте размер (должно быть ~9.7 МБ)
+ls -lh qdrant-backup.tar.gz
 ```
+
+**Подробнее:** см. `DOWNLOAD_BACKUP.md`
 
 #### Восстановление векторов
 ```bash
