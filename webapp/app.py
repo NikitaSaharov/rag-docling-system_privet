@@ -13,8 +13,8 @@ app.config['UPLOAD_FOLDER'] = '/documents'
 app.config['PROCESSED_FOLDER'] = '/shared/processed'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
-OLLAMA_URL = "http://ollama-docling:11434"
-QDRANT_URL = "http://qdrant-docling:6333"
+OLLAMA_URL = "http://ollama:11434"
+QDRANT_URL = "http://qdrant:6333"
 COLLECTION_NAME = "documents"
 
 # Polza.ai API настройки (OpenAI-совместимый endpoint)
