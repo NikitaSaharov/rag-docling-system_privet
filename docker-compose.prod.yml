@@ -35,7 +35,7 @@ services:
   webapp:
     build:
       context: .
-      dockerfile: webapp/Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: vectorstom-webapp
     restart: always
     environment:
