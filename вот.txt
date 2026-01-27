@@ -1,0 +1,11 @@
+root@cv5856247:~/vectorstom# cd ~/vectorstom
+root@cv5856247:~/vectorstom# cp nginx-simple.conf nginx/nginx.conf
+root@cv5856247:~/vectorstom# docker-compose -f docker-compose.prod.yml restart nginx
+Restarting vectorstom-nginx ... done
+root@cv5856247:~/vectorstom# docker ps
+CONTAINER ID   IMAGE                  COMMAND                  CREATED         STATUS                   PORTS                                 NAMES
+8f6cfde10189   nginx:alpine           "/docker-entrypoint.…"   5 minutes ago   Up 5 seconds             0.0.0.0:80->80/tcp, [::]:80->80/tcp   vectorstom-nginx
+e5aecc4cc2ab   vectorstom_webapp      "gunicorn --bind 0.0…"   5 minutes ago   Up 5 minutes (healthy)                                         vectorstom-webapp
+cf3cb4f274f9   qdrant/qdrant:latest   "./entrypoint.sh"        5 minutes ago   Up 5 minutes             6333-6334/tcp                         vectorstom-qdrant
+0a8e2da8f1f1   ollama/ollama:latest   "/bin/ollama serve"      5 minutes ago   Up 5 minutes             11434/tcp                             vectorstom-ollama
+root@cv5856247:~/vectorstom#
