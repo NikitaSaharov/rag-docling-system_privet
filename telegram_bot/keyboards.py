@@ -35,3 +35,19 @@ def get_phone_request_keyboard():
         one_time_keyboard=True
     )
     return keyboard
+
+def get_suggestions_keyboard(suggestions):
+    """
+    Создает inline-клавиатуру с номерами вопросов (1, 2, 3)
+    """
+    buttons = []
+    for idx in range(min(len(suggestions), 3)):  # Максимум 3 кнопки
+        buttons.append(
+            InlineKeyboardButton(
+                text=f"{idx + 1}",
+                callback_data=f"suggestion:{idx}"
+            )
+        )
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons])
+    return keyboard

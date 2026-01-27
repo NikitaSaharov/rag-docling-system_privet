@@ -269,6 +269,51 @@
             line-height: 1.5;
         }
         
+        .suggestions {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            border-left: 3px solid #10b981;
+        }
+        
+        .suggestions-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #059669;
+            margin-bottom: 8px;
+        }
+        
+        .suggestion-btn {
+            display: block;
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: white;
+            border: 1px solid #d1fae5;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: left;
+            color: #047857;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .suggestion-btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        .suggestion-btn:hover {
+            background: #d1fae5;
+            border-color: #10b981;
+            transform: translateX(4px);
+        }
+        
+        .suggestion-btn:active {
+            transform: translateX(2px);
+        }
+        
         .input-container {
             padding: 16px 24px;
             border-top: 1px solid #e5e7eb;
@@ -587,9 +632,58 @@
             }
         }
         
+        function parseSuggestions(text) {
+            // Извлекаем suggestions из секции "Вопросы:"
+            const pattern = /Вопросы:\s*\n((?:\d+\..*?\n?)+)/m;
+            const match = text.match(pattern);
+            
+            if (!match) {
+                // Пробуем старый формат [SUGGESTIONS]
+                const oldPattern = /\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]/;
+                const oldMatch = text.match(oldPattern);
+                if (oldMatch) {
+                    const suggestionsBlock = oldMatch[1];
+                    const cleanText = text.replace(oldPattern, '').trim();
+                    const suggestions = [];
+                    const lines = suggestionsBlock.trim().split('\n');
+                    for (const line of lines) {
+                        const lineMatch = line.trim().match(/^\d+\.\s*(.+)$/);
+                        if (lineMatch) {
+                            suggestions.push(lineMatch[1]);
+                        }
+                    }
+                    return { cleanText, suggestions };
+                }
+                return { cleanText: text, suggestions: [] };
+            }
+            
+            const suggestionsBlock = match[1];
+            
+            const suggestions = [];
+            const lines = suggestionsBlock.trim().split('\n');
+            for (const line of lines) {
+                const lineMatch = line.trim().match(/^\d+\.\s*(.+)$/);
+                if (lineMatch) {
+                    suggestions.push(lineMatch[1]);
+                }
+            }
+            
+            // Возвращаем полный текст (НЕ удаляем секцию)
+            return { cleanText: text, suggestions };
+        }
+        
         function addMessage(type, text, sources = null) {
             const container = document.getElementById('messagesContainer');
             const id = 'msg-' + Date.now();
+            
+            // Парсим suggestions только для ассистента
+            let cleanText = text;
+            let suggestions = [];
+            if (type === 'assistant') {
+                const parsed = parseSuggestions(text);
+                cleanText = parsed.cleanText;
+                suggestions = parsed.suggestions;
+            }
             
             const messageDiv = document.createElement('div');
             messageDiv.id = id;
@@ -604,7 +698,7 @@
             
             const textDiv = document.createElement('div');
             textDiv.className = 'message-text';
-            textDiv.textContent = text;
+            textDiv.textContent = cleanText;
             
             content.appendChild(textDiv);
             
@@ -636,6 +730,30 @@
                 });
                 
                 content.appendChild(sourcesDiv);
+            }
+            
+            // Добавляем suggestions
+            if (suggestions && suggestions.length > 0) {
+                const suggestionsDiv = document.createElement('div');
+                suggestionsDiv.className = 'suggestions';
+                
+                const title = document.createElement('div');
+                title.className = 'suggestions-title';
+                title.textContent = '💡 Возможно, вам будет интересно:';
+                suggestionsDiv.appendChild(title);
+                
+                suggestions.forEach((suggestion, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'suggestion-btn';
+                    btn.textContent = `${idx + 1}. ${suggestion}`;
+                    btn.onclick = () => {
+                        document.getElementById('queryInput').value = suggestion;
+                        search();
+                    };
+                    suggestionsDiv.appendChild(btn);
+                });
+                
+                content.appendChild(suggestionsDiv);
             }
             
             messageDiv.appendChild(avatar);

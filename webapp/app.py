@@ -433,8 +433,15 @@ def ask_llm(query, context, model="deepseek"):
 2. Как увеличить конверсию через обучение врачей?"
 
 В КОНЦЕ ОТВЕТА:
-Добавь 2-3 УТОЧНЯЮЩИХ вопроса, которые УГЛУБЛЯЮТ тему запроса.
-Например:
+Добавь секцию "Вопросы:" с 2-3 уточняющими вопросами.
+Обязательный формат:
+
+Вопросы:
+1. <текст вопроса>
+2. <текст вопроса>
+3. <текст вопроса>
+
+ПРИМЕР УТОЧНЯЮЩИХ ВОПРОСОВ:
 - Если спросили о нормочасе → предложи узнать про коэффициент загрузки, рабочее время, ВВ
 - Если спросили о материалах → предложи узнать конкретные расходы, стоимость, поставщиков
 - Если спросили "что делать" → предложи конкретные метрики, инструменты контроля
@@ -453,7 +460,8 @@ def ask_llm(query, context, model="deepseek"):
 
 Вопросы:
 1. Как рассчитать коэффициент загрузки доктора?
-2. Как влияет нормочас на валовую выручку клиники?"
+2. Как влияет нормочас на валовую выручку клиники?
+3. Какие факторы влияют на нормочас?"
 
 ПРИМЕР НЕПРАВИЛЬНОГО ОТВЕТА (с markdown - ТАК НЕЛЬЗЯ!):
 "1. **Оптимизация загрузки докторов**
@@ -668,6 +676,23 @@ def upload_file():
         error_trace = traceback.format_exc()
         print(f"EXCEPTION in upload: {error_trace}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/telegram/check_auth', methods=['POST'])
+def telegram_check_auth():
+    """Быстрая проверка авторизации для Telegram бота"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    
+    if not telegram_id:
+        return jsonify({'authorized': False}), 400
+    
+    # Проверяем авторизацию пользователя
+    user = db.get_user_by_telegram_id(telegram_id)
+    
+    return jsonify({
+        'authorized': bool(user),
+        'user_id': user['id'] if user else None
+    })
 
 @app.route('/api/telegram/search', methods=['POST'])
 def telegram_search():
