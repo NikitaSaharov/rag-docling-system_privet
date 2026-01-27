@@ -95,6 +95,7 @@ services:
       - ./docling_app:/docling_app
       - ./documents:/documents
       - ./shared:/shared
+      - ./shared/db:/db  # SQLite база данных
     env_file:
       - .env.local
     command: bash -c "pip install -r requirements.txt && python app.py"
@@ -106,12 +107,33 @@ services:
       - docling
     environment:
       - PYTHONPATH=/docling_app
+      - DB_PATH=/db/docling.db
+
+  # Telegram Bot - бот для Telegram
+  telegram-bot:
+    build:
+      context: ./telegram_bot
+      dockerfile: Dockerfile
+    container_name: docling-telegram-bot
+    restart: unless-stopped
+    volumes:
+      - ./shared/db:/db  # Доступ к той же базе
+    env_file:
+      - .env.local
+    networks:
+      - docling-network
+    depends_on:
+      - webapp
+      - qdrant
+    environment:
+      - FLASK_API_URL=http://webapp:5000
 
 volumes:
   n8n_data:
   ollama_data:
   qdrant_data:
   open_webui_data:
+  db_data:  # Volume для SQLite базы
 
 networks:
   docling-network:

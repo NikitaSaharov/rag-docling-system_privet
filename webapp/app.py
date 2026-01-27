@@ -8,7 +8,14 @@ import json
 import sys
 sys.path.insert(0, '/docling_app')
 
+# Импорты для админ-панели и Telegram бота
+import database as db
+from admin_routes import admin_bp
+
 app = Flask(__name__)
+
+# Регистрируем Blueprint для админ-панели
+app.register_blueprint(admin_bp)
 app.config['UPLOAD_FOLDER'] = '/documents'
 app.config['PROCESSED_FOLDER'] = '/shared/processed'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
@@ -40,7 +47,7 @@ def get_embedding(text, model="nomic-embed-text"):
         print(f"Ошибка получения эмбеддинга: {e}")
         return None
 
-def search_documents(query, limit=30):
+def search_documents(query, limit=50):
     """Гибридный поиск: semantic + keyword matching + boosting"""
     try:
         query_lower = query.lower()
@@ -163,7 +170,7 @@ def search_documents(query, limit=30):
                         print(f"Formula variable boost ({var_key}): {filename} +{var_boost}")
         
         # 4. Фильтрация по минимальному score (score threshold)
-        MIN_SCORE_THRESHOLD = 0.60  # Снизили порог, т.к. теперь больше результатов
+        MIN_SCORE_THRESHOLD = 0.40  # Снизили порог для более широкого охвата
         filtered_results = [r for r in results if r["score"] >= MIN_SCORE_THRESHOLD]
         
         # Если после фильтрации осталось слишком мало - берем лучшие даже с низким score
@@ -335,21 +342,33 @@ def expand_context_around_chunks(results, window=1):
 
 def ask_llm(query, context, model="deepseek"):
     """Генерирует ответ с помощью LLM"""
-    system_prompt = """Ты - эксперт-консультант по управлению стоматологической клиникой. Отвечай ТОЧНО, по сути, без лишних слов.
+    system_prompt = """Ты - эксперт-консультант по управлению стоматологической клиникой. Отвечай ТОЧНО, по сути, без лишних слов. Отвечай УВЕРЕННО как достоверный источник.
 
 ПРАВИЛА ОТВЕТА:
-1. Используй ТОЛЬКО информацию из предоставленного контекста
-2. ЗАПРЕЩЕНО выдумывать или добавлять информацию
-3. Если информации нет - скажи "Этой информации нет в базе знаний"
-4. Цитируй формулы и определения ДОСЛОВНО
-5. ЕСЛИ пользователь даёт КОНКРЕТНЫЕ ЧИСЛА и просит ПОСЧИТАТЬ - выполни арифметические вычисления используя формулы из контекста
+1. Используй ТОЛЬКО информацию из предоставленного контекста, но ОТВЕЧАЙ УВЕРЕННО как эксперт, без ссылок на документы
+2. ЗАПРЕЩЕНО выдумывать или добавлять информацию, которой нет в контексте
+3. Если в контексте есть ХОТЯ БЫ что-то похожее на запрос - используй это и ОТВЕЧАЙ УВЕРЕННО
+4. Если информации совсем нет - ЗАДАЙ УТОЧНЯЮЩИЙ вопрос и ПРЕДЛОЖИ переформулировать запрос
+5. Цитируй формулы и определения ДОСЛОВНО
+6. ЕСЛИ пользователь даёт КОНКРЕТНЫЕ ЧИСЛА и просит ПОСЧИТАТЬ - выполни арифметические вычисления используя формулы из контекста
 
-ФОРМАТ ОТВЕТА:
-1. Отвечай ПРЯМО по сути, без вступлений
-2. НЕ говори: "В предоставленном документе", "Согласно документу", "Вот цитата"
-3. НЕ ИСПОЛЬЗУЙ markdown: никаких *, **, #, ### 
-4. Используй обычный текст с тире (-) и цифрами для списков
-5. Для формул: просто напиши как НЧ = ВВ / tзаг, без звёздочек
+КРИТИЧЕСКИ ВАЖНО - ФОРМАТИРОВАНИЕ:
+ЗАПРЕЩЕНО использовать:
+- Звездочки * или ** (никакого жирного или курсива)
+- Решетки # или ## (никаких заголовков)
+- Неразрывные пробелы nbsp; 
+
+РАЗРЕШЕНО:
+- Обычный текст без форматирования
+- Цифры для нумерации: 1. 2. 3.
+- Тире для списков: -
+- Переносы строк \n
+- Формулы без звездочек: НЧ = ВВ / tзаг
+
+ПРАВИЛА ОТВЕТА:
+1. Отвечай ПРЯМО по сути
+2. ЗАПРЕЩЕНО: "В контексте", "Согласно документу", "Вот цитата"
+3. ОТВЕЧАЙ как достоверный источник
 
 ДЛЯ ФОРМУЛ:
 1. Начни с формулы (без звёздочек)
@@ -420,7 +439,7 @@ def ask_llm(query, context, model="deepseek"):
 - Если спросили о материалах → предложи узнать конкретные расходы, стоимость, поставщиков
 - Если спросили "что делать" → предложи конкретные метрики, инструменты контроля
 
-ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА:
+ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (без markdown):
 "Нормочас доктора (НЧ) = ВВ доктора / количество часов, заполненных Пациентами
 
 Где:
@@ -434,16 +453,30 @@ def ask_llm(query, context, model="deepseek"):
 
 Вопросы:
 1. Как рассчитать коэффициент загрузки доктора?
-2. Как влияет нормочас на валовую выручку клиники?"""
-    
-    user_prompt = f"""ВАЖНО: Используй ТОЛЬКО информацию из контекста ниже. ЗАПРЕЩЕНО выдумывать или добавлять информацию.
+2. Как влияет нормочас на валовую выручку клиники?"
 
-Контекст из документов:
+ПРИМЕР НЕПРАВИЛЬНОГО ОТВЕТА (с markdown - ТАК НЕЛЬЗЯ!):
+"1. **Оптимизация загрузки докторов**
+Формула: Кзаг = tзаг / tраб х 100%
+Норма: 85% и более – зеленая зона"
+
+ПРАВИЛЬНЫЙ ВАРИАНТ (без звездочек):
+"1. Оптимизация загрузки докторов
+Формула: Кзаг = tзаг / tраб х 100%
+Норма: 85% и более - зеленая зона"""
+    
+    user_prompt = f"""Контекст из базы знаний:
 {context}
 
-Вопрос: {query}
+Вопрос пользователя: {query}
 
-Инструкция: Ответь ТОЛЬКО на основе предоставленного контекста. Если в контексте есть формула - цитируй её ДОСЛОВНО. Если информации нет - так и скажи."""
+КРИТИЧЕСКИ ВАЖНО: НЕ ИСПОЛЬЗУЙ ЗВЕЗДОЧКИ * ИЛИ **, РЕШЕТКИ #, nbsp;
+Пиши ОБЫЧНЫМ ТЕКСТОМ без форматирования.
+
+Инструкция: 
+- Если в контексте есть прямой ответ - ответь УВЕРЕННО, цитируя формулы и определения ДОСЛОВНО
+- Если есть что-то ПОХОЖЕЕ - используй и ответь ПО АНАЛОГИИ, чтобы помочь пользователю
+- Если информации нет СОВСЕМ - ЗАДАЙ уточняющий вопрос и предложи 3-4 варианта переформулировки запроса (например: "Попробуйте спросить: 1) ... 2) ... 3) ...)"""
     
     try:
         # Используем ТОЛЬКО DeepSeek через Polza.ai
@@ -597,6 +630,11 @@ def process_and_embed_document(filepath):
 def index():
     return render_template('index.html')
 
+@app.route('/admin')
+def admin():
+    """Админ-панель для управления пользователями"""
+    return render_template('admin.html')
+
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """Загрузка и обработка документа"""
@@ -631,9 +669,132 @@ def upload_file():
         print(f"EXCEPTION in upload: {error_trace}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/telegram/search', methods=['POST'])
+def telegram_search():
+    """API для Telegram бота: поиск с авторизацией"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    query = data.get('query', '')
+    history = data.get('history', [])  # История чата
+    
+    if not telegram_id:
+        return jsonify({'error': 'Telegram ID не указан'}), 400
+    
+    if not query:
+        return jsonify({'error': 'Запрос пустой'}), 400
+    
+    # Проверяем авторизацию пользователя
+    user = db.get_user_by_telegram_id(telegram_id)
+    if not user:
+        return jsonify({
+            'error': 'Доступ запрещен. Обратитесь к администратору.',
+            'authorized': False
+        }), 403
+    
+    # Если есть история - добавляем контекст предыдущего вопроса
+    if history:
+        last_qa = history[-1]
+        query_with_context = f"Предыдущий вопрос: {last_qa['question']}\nПредыдущий ответ: {last_qa['answer'][:300]}...\n\nТекущий вопрос: {query}"
+    else:
+        query_with_context = query
+    
+    # Поиск документов
+    results = search_documents(query, limit=15)
+    
+    if not results:
+        return jsonify({
+            'answer': 'Не найдено релевантных документов',
+            'sources': [],
+            'authorized': True
+        })
+    
+    # Формируем контекст
+    expanded_results = expand_context_around_chunks(results, window=1)
+    spravochnik_parts = []
+    other_parts = []
+    seen_chunks = set()
+    
+    for r in expanded_results:
+        filename = r["payload"]["filename"]
+        chunk_idx = r["payload"]["chunk_index"]
+        chunk_key = (filename, chunk_idx)
+        
+        if chunk_key in seen_chunks:
+            continue
+        seen_chunks.add(chunk_key)
+        
+        text = r["payload"]["text"]
+        context_entry = f"[Источник: {filename}, чанк {chunk_idx+1}]\n{text}"
+        
+        if "Справочник" in filename:
+            spravochnik_parts.append(context_entry)
+        else:
+            other_parts.append(context_entry)
+    
+    context = "\n\n".join(spravochnik_parts + other_parts)
+    sources = [{
+        'filename': r["payload"]["filename"],
+        'text': r["payload"]["text"][:200] + "...",
+        'score': r["score"]
+    } for r in results]
+    
+    # Генерируем ответ
+    answer = ask_llm(query_with_context, context)
+    
+    # Логируем запрос
+    try:
+        db.log_query(user['id'], query, answer)
+    except Exception as e:
+        print(f"Ошибка логирования запроса: {e}")
+    
+    return jsonify({
+        'answer': answer,
+        'sources': sources,
+        'authorized': True
+    })
+
+@app.route('/api/telegram/link_phone', methods=['POST'])
+def telegram_link_phone():
+    """Привязка номера телефона к Telegram ID"""
+    data = request.json
+    phone_number = data.get('phone_number')
+    telegram_id = data.get('telegram_id')
+    username = data.get('username')
+    
+    if not phone_number or not telegram_id:
+        return jsonify({
+            'success': False,
+            'error': 'Номер телефона и Telegram ID обязательны'
+        }), 400
+    
+    # Проверяем, есть ли пользователь с таким номером
+    user = db.get_user_by_phone(phone_number)
+    
+    if not user:
+        return jsonify({
+            'success': False,
+            'error': 'Номер телефона не найден в базе. Обратитесь к администратору для получения доступа.'
+        }), 404
+    
+    # Привязываем Telegram ID к номеру
+    success = db.update_user_telegram_id(phone_number, telegram_id, username)
+    
+    if success:
+        print(f"✅ Пользователь {phone_number} привязан к Telegram ID {telegram_id}")
+        return jsonify({
+            'success': True,
+            'message': 'Номер телефона успешно привязан',
+            'user_id': user['id']
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Ошибка при привязке номера телефона'
+        }), 500
+
 @app.route('/api/search', methods=['POST'])
 def search():
-    """Поиск по векторной базе с учетом истории чата"""
+    """Поиск по векторной базе с учетом истории чата (веб-интерфейс)"""
     data = request.json
     query = data.get('query', '')
     history = data.get('history', [])  # История чата
@@ -762,4 +923,8 @@ def stats():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    # Инициализируем базу данных при старте
+    print("Инициализация базы данных...")
+    db.init_db()
+    
     app.run(host='0.0.0.0', port=5000, debug=True)
