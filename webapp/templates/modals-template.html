@@ -1,0 +1,140 @@
+<!-- Боковая панель -->
+<div class="sidebar hidden" id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-user" id="sidebarEmail">user@example.com</div>
+        <button class="new-chat-btn" id="newChatBtn">+ Новый чат</button>
+    </div>
+    <div class="sessions-list" id="sessionsList">
+        <!-- Список сессий генерируется динамически -->
+    </div>
+</div>
+
+<!-- Модальное окно входа -->
+<div class="modal" id="loginModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Вход</div>
+            <div class="modal-subtitle">Войдите, чтобы продолжить</div>
+        </div>
+        <form id="loginForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="loginEmail" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input type="password" id="loginPassword" class="form-input" required>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="submit" form="loginForm" class="modal-btn modal-btn-primary">Войти</button>
+            <div class="modal-link" id="showForgotPasswordFromLogin">Забыли пароль?</div>
+            <div class="modal-link" id="showRegisterBtn">Нет аккаунта? Зарегистрироваться</div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно регистрации -->
+<div class="modal" id="registerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Регистрация</div>
+            <div class="modal-subtitle">Создайте новый аккаунт</div>
+        </div>
+        <form id="registerForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Имя</label>
+                <input type="text" id="registerUsername" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="registerEmail" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input type="password" id="registerPassword" class="form-input" required minlength="6">
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="submit" form="registerForm" class="modal-btn modal-btn-primary">Зарегистрироваться</button>
+            <div class="modal-link" id="showLoginFromRegister">Уже есть аккаунт? Войти</div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно верификации email -->
+<div class="modal" id="verifyEmailModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Подтверждение email</div>
+            <div class="modal-subtitle">Введите код из письма</div>
+        </div>
+        <form id="verifyEmailForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Код подтверждения</label>
+                <input type="text" id="verifyEmailCode" class="form-input code-input" required maxlength="6" pattern="\d{6}">
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="submit" form="verifyEmailForm" class="modal-btn modal-btn-primary">Подтвердить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно восстановления пароля (шаг 1 - ввод email) -->
+<div class="modal" id="forgotPasswordModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Восстановление пароля</div>
+            <div class="modal-subtitle">Введите ваш email</div>
+        </div>
+        <form id="forgotPasswordForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="forgotEmail" class="form-input" required>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="submit" form="forgotPasswordForm" class="modal-btn modal-btn-primary">Отправить код</button>
+            <div class="modal-link" id="showLoginFromForgot">Вернуться к входу</div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно восстановления пароля (шаг 2 - ввод кода) -->
+<div class="modal" id="verifyResetCodeModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Проверка кода</div>
+            <div class="modal-subtitle">Введите код из письма</div>
+        </div>
+        <form id="verifyResetCodeForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Код восстановления</label>
+                <input type="text" id="resetCode" class="form-input code-input" required maxlength="6" pattern="\d{6}">
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="submit" form="verifyResetCodeForm" class="modal-btn modal-btn-primary">Проверить код</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно восстановления пароля (шаг 3 - новый пароль) -->
+<div class="modal" id="resetPasswordModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Новый пароль</div>
+            <div class="modal-subtitle">Придумайте новый пароль</div>
+        </div>
+        <form id="resetPasswordForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Новый пароль</label>
+                <input type="password" id="newPassword" class="form-input" required minlength="6">
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="submit" form="resetPasswordForm" class="modal-btn modal-btn-primary">Сохранить пароль</button>
+        </div>
+    </div>
+</div>

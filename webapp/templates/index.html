@@ -70,6 +70,8 @@
             max-width: 1200px;
             width: 100%;
             margin: 0 auto;
+            overflow: hidden; /* Важно для работы скролла внутри */
+            min-height: 0; /* Fix для flex контейнера */
         }
         
         .messages-container {
@@ -337,6 +339,363 @@
             line-height: 1.6;
         }
         
+        /* Auth Button */
+        .auth-button {
+            padding: 8px 16px;
+            background: var(--primary-gold);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .auth-button:hover {
+            background: #a89270;
+            transform: translateY(-1px);
+        }
+        
+        .user-menu {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-email {
+            font-size: 14px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+        
+        .logout-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn:hover {
+            border-color: var(--primary-gold);
+            color: var(--primary-gold);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-white);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1001;
+            transition: transform 0.3s;
+        }
+        
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .sidebar-user {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+        
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-gold);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .new-chat-btn:hover {
+            background: #a89270;
+        }
+        
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        
+        .session-item {
+            padding: 12px;
+            margin-bottom: 6px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .session-item:hover {
+            background: rgba(191, 171, 138, 0.1);
+        }
+        
+        .session-item.active {
+            background: rgba(191, 171, 138, 0.2);
+            border-left: 3px solid var(--primary-gold);
+        }
+        
+        .session-title {
+            font-size: 14px;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .session-date {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .session-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .session-item:hover .session-actions {
+            opacity: 1;
+        }
+        
+        .session-action-btn {
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .session-action-btn:hover {
+            background: var(--primary-gold);
+            border-color: var(--primary-gold);
+            color: white;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            margin-bottom: 24px;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+        
+        .modal-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .modal-body {
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 0 3px rgba(191, 171, 138, 0.1);
+        }
+        
+        .code-input {
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 8px;
+            font-weight: 700;
+        }
+        
+        .modal-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .modal-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .modal-btn-primary {
+            background: var(--primary-gold);
+            color: white;
+        }
+        
+        .modal-btn-primary:hover:not(:disabled) {
+            background: #a89270;
+        }
+        
+        .modal-btn-primary:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .modal-btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .modal-btn-secondary:hover {
+            background: var(--bg-light);
+        }
+        
+        .modal-link {
+            text-align: center;
+            font-size: 14px;
+            color: var(--primary-gold);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .modal-link:hover {
+            color: #a89270;
+        }
+        
+        .error-message {
+            padding: 12px;
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            color: #c33;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .success-message {
+            padding: 12px;
+            background: #efe;
+            border: 1px solid #cfc;
+            border-radius: 8px;
+            color: #3c3;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .with-sidebar {
+            margin-left: 280px;
+        }
+        
+        .toggle-sidebar-btn {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .glass-header {
@@ -398,7 +757,160 @@
         <div class="logo">
             <span class="logo-accent">Vector</span>Stom
         </div>
+        <div>
+            <button class="auth-button" id="authButton" onclick="showModal('loginModal')">Войти</button>
+            <div class="user-menu" id="userMenu" style="display: none;">
+                <span class="user-email" id="userEmail"></span>
+                <button class="logout-btn" id="logoutBtn">Выйти</button>
+            </div>
+        </div>
     </header>
+    
+    <!-- Sidebar и модальные окна -->
+    <div class="sidebar hidden" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-user" id="sidebarEmail">user@example.com</div>
+            <button class="new-chat-btn" id="newChatBtn">+ Новый чат</button>
+        </div>
+        <div class="sessions-list" id="sessionsList">
+            <!-- Список сессий генерируется динамически -->
+        </div>
+    </div>
+    
+    <!-- Модальное окно входа -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Вход</div>
+                <div class="modal-subtitle">Войдите, чтобы продолжить</div>
+            </div>
+            <form id="loginForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="loginEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" id="loginPassword" class="form-input" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="submit" form="loginForm" class="modal-btn modal-btn-primary">Войти</button>
+                <div class="modal-link" id="showForgotPasswordFromLogin">Забыли пароль?</div>
+                <div class="modal-link" id="showRegisterBtn">Нет аккаунта? Зарегистрироваться</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно регистрации -->
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Регистрация</div>
+                <div class="modal-subtitle">Создайте новый аккаунт</div>
+            </div>
+            <form id="registerForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Имя</label>
+                    <input type="text" id="registerUsername" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" id="registerPassword" class="form-input" required minlength="6">
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="submit" form="registerForm" class="modal-btn modal-btn-primary">Зарегистрироваться</button>
+                <div class="modal-link" id="showLoginFromRegister">Уже есть аккаунт? Войти</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно верификации email -->
+    <div class="modal" id="verifyEmailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Подтверждение email</div>
+                <div class="modal-subtitle">Введите код из письма</div>
+            </div>
+            <form id="verifyEmailForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Код подтверждения</label>
+                    <input type="text" id="verifyEmailCode" class="form-input code-input" required maxlength="6" pattern="\d{6}" placeholder="123456">
+                    <div style="margin-top: 10px; font-size: 12px; color: #6f6f6f;">
+                        Проверьте папку "Спам" если не нашли письмо
+                    </div>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="submit" form="verifyEmailForm" class="modal-btn modal-btn-primary">Подтвердить</button>
+                <div class="modal-link" id="resendVerificationCode">Отправить код повторно</div>
+                <div class="modal-link" id="backToLoginFromVerify">Вернуться к входу</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно восстановления пароля (шаг 1 - ввод email) -->
+    <div class="modal" id="forgotPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Восстановление пароля</div>
+                <div class="modal-subtitle">Введите ваш email</div>
+            </div>
+            <form id="forgotPasswordForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="forgotEmail" class="form-input" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="submit" form="forgotPasswordForm" class="modal-btn modal-btn-primary">Отправить код</button>
+                <div class="modal-link" id="showLoginFromForgot">Вернуться к входу</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно восстановления пароля (шаг 2 - ввод кода) -->
+    <div class="modal" id="verifyResetCodeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Проверка кода</div>
+                <div class="modal-subtitle">Введите код из письма</div>
+            </div>
+            <form id="verifyResetCodeForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Код восстановления</label>
+                    <input type="text" id="resetCode" class="form-input code-input" required maxlength="6" pattern="\d{6}">
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="submit" form="verifyResetCodeForm" class="modal-btn modal-btn-primary">Проверить код</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно восстановления пароля (шаг 3 - новый пароль) -->
+    <div class="modal" id="resetPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Новый пароль</div>
+                <div class="modal-subtitle">Придумайте новый пароль</div>
+            </div>
+            <form id="resetPasswordForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Новый пароль</label>
+                    <input type="password" id="newPassword" class="form-input" required minlength="6">
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="submit" form="resetPasswordForm" class="modal-btn modal-btn-primary">Сохранить пароль</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Main Chat Area -->
     <div class="main-container">
@@ -696,5 +1208,8 @@
         
         // Documents list moved to admin panel - /admin
     </script>
+    
+    <!-- Auth and Chat Sessions Script -->
+    <script src="{{ url_for('static', filename='auth.js') }}"></script>
 </body>
 </html>

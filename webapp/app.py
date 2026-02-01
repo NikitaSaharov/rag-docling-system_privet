@@ -11,12 +11,17 @@ sys.path.insert(0, '/docling_app')
 # Импорты для админ-панели и Telegram бота
 import database as db
 from admin_routes import admin_bp
+from auth_routes import auth_bp, jwt_required
+from chat_routes import chat_bp
 from examples_loader import load_examples, format_examples_for_prompt
 
 app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
-# Регистрируем Blueprint для админ-панели
+# Регистрируем Blueprint
 app.register_blueprint(admin_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(chat_bp)
 app.config['UPLOAD_FOLDER'] = '/documents'
 app.config['PROCESSED_FOLDER'] = '/shared/processed'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
@@ -843,10 +848,12 @@ def telegram_link_phone():
         }), 500
 
 @app.route('/api/search', methods=['POST'])
+@jwt_required
 def search():
     """Поиск по векторной базе с учетом истории чата (веб-интерфейс)"""
     data = request.json
     query = data.get('query', '')
+    session_id = data.get('session_id')  # ID текущей сессии
     history = data.get('history', [])  # История чата
     
     if not query:
@@ -907,9 +914,24 @@ def search():
     # Генерируем ответ с учетом истории
     answer = ask_llm(query_with_context, context)
     
+    # Сохраняем в историю чата
+    try:
+        # Если нет сессии - создаем новую
+        if not session_id:
+            # Создаем название из первых 50 символов запроса
+            title = query[:50] + ('...' if len(query) > 50 else '')
+            session_id = db.create_chat_session(request.user_id, 'web', title)
+        
+        # Сохраняем вопрос и ответ
+        db.add_chat_message(session_id, 'user', query)
+        db.add_chat_message(session_id, 'assistant', answer)
+    except Exception as e:
+        print(f"Ошибка сохранения в историю: {e}")
+    
     return jsonify({
         'answer': answer,
-        'sources': sources
+        'sources': sources,
+        'session_id': session_id
     })
 
 @app.route('/api/documents', methods=['GET'])

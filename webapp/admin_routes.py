@@ -3,6 +3,7 @@ import database as db
 import re
 import requests
 import os
+from telegram_notify import notify_access_approved, notify_access_rejected
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -202,6 +203,99 @@ def create_access_request():
             'error': str(e)
         }), 500
 
+@admin_bp.route('/web-users', methods=['GET'])
+def get_web_users():
+    """Получить список web-пользователей"""
+    try:
+        limit = int(request.args.get('limit', 100))
+        offset = int(request.args.get('offset', 0))
+        
+        users = db.list_web_users(limit=limit, offset=offset)
+        return jsonify({
+            'success': True,
+            'users': users,
+            'count': len(users)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/web-users/<int:user_id>/sessions', methods=['GET'])
+def get_web_user_sessions(user_id):
+    """Получить сессии чатов web-пользователя"""
+    try:
+        sessions = db.get_user_chat_sessions(user_id, 'web', limit=100)
+        return jsonify({
+            'success': True,
+            'sessions': sessions,
+            'count': len(sessions)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/web-users/<int:user_id>/sessions/<int:session_id>/messages', methods=['GET'])
+def get_web_user_session_messages(user_id, session_id):
+    """Получить сообщения конкретной сессии"""
+    try:
+        messages = db.get_chat_messages(session_id, limit=100)
+        return jsonify({
+            'success': True,
+            'messages': messages
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/web-users/<int:user_id>/toggle-active', methods=['POST'])
+def toggle_web_user_active(user_id):
+    """Активировать/деактивировать web-пользователя"""
+    try:
+        # Получаем текущего пользователя
+        user = db.get_web_user_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': 'Пользователь не найден'
+            }), 404
+        
+        # Меняем статус
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        new_status = 0 if user['is_active'] else 1
+        cursor.execute('''
+            UPDATE web_users 
+            SET is_active = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (new_status, user_id))
+        conn.commit()
+        success = cursor.rowcount > 0
+        conn.close()
+        
+        if success:
+            status_text = 'активирован' if new_status else 'деактивирован'
+            return jsonify({
+                'success': True,
+                'message': f'Пользователь {status_text}',
+                'is_active': new_status
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Ошибка обновления статуса'
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @admin_bp.route('/documents', methods=['GET'])
 def get_documents():
     """Получить список документов из Qdrant"""
@@ -286,9 +380,24 @@ def get_documents():
 def approve_request(request_id):
     """Одобрить запрос на доступ"""
     try:
-        success, message = db.approve_access_request(request_id)
+        result = db.approve_access_request(request_id)
+        
+        # Распаковываем результат (success, message, user_data)
+        if len(result) == 3:
+            success, message, user_data = result
+        else:
+            # Обратная совместимость
+            success, message = result
+            user_data = None
         
         if success:
+            # Отправляем уведомление пользователю
+            if user_data and user_data.get('telegram_id'):
+                notify_access_approved(
+                    user_data['telegram_id'],
+                    user_data.get('username')
+                )
+            
             return jsonify({
                 'success': True,
                 'message': message
@@ -308,9 +417,16 @@ def approve_request(request_id):
 def reject_request(request_id):
     """Отклонить запрос на доступ"""
     try:
-        success = db.reject_access_request(request_id)
+        success, user_data = db.reject_access_request(request_id)
         
         if success:
+            # Отправляем уведомление пользователю
+            if user_data and user_data.get('telegram_id'):
+                notify_access_rejected(
+                    user_data['telegram_id'],
+                    user_data.get('username')
+                )
+            
             return jsonify({
                 'success': True,
                 'message': 'Запрос отклонен'
