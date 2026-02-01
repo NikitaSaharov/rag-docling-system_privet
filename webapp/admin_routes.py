@@ -1,8 +1,14 @@
 from flask import Blueprint, jsonify, request
 import database as db
 import re
+import requests
+import os
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+# Qdrant settings
+QDRANT_URL = os.getenv('QDRANT_URL', 'http://qdrant:6333')
+COLLECTION_NAME = "documents"
 
 def validate_phone_number(phone):
     """Валидация номера телефона (международный формат)"""
@@ -190,6 +196,86 @@ def create_access_request():
                 'success': False,
                 'error': 'Ошибка создания запроса'
             }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/documents', methods=['GET'])
+def get_documents():
+    """Получить список документов из Qdrant"""
+    try:
+        # Получаем все точки из коллекции
+        all_points = []
+        offset = None
+        
+        # Scroll через всю коллекцию
+        for _ in range(100):  # Максимум 100 итераций
+            scroll_params = {
+                "limit": 100,
+                "with_payload": True,
+                "with_vector": False
+            }
+            if offset:
+                scroll_params["offset"] = offset
+            
+            response = requests.post(
+                f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
+                json=scroll_params,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                break
+            
+            data = response.json()
+            points = data.get("result", {}).get("points", [])
+            
+            if not points:
+                break
+            
+            all_points.extend(points)
+            offset = data.get("result", {}).get("next_page_offset")
+            
+            if not offset:
+                break
+        
+        # Группируем по документам
+        documents = {}
+        for point in all_points:
+            payload = point.get("payload", {})
+            filename = payload.get("filename", "Unknown")
+            
+            if filename not in documents:
+                documents[filename] = {
+                    "filename": filename,
+                    "chunks": 0,
+                    "total_chunks": payload.get("total_chunks", 0)
+                }
+            
+            documents[filename]["chunks"] += 1
+        
+        # Конвертируем в список
+        docs_list = list(documents.values())
+        docs_list.sort(key=lambda x: x["filename"])
+        
+        # Получаем общую статистику
+        collection_info = requests.get(
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}",
+            timeout=10
+        )
+        
+        vectors_count = 0
+        if collection_info.status_code == 200:
+            vectors_count = collection_info.json().get("result", {}).get("vectors_count", 0)
+        
+        return jsonify({
+            'success': True,
+            'documents': docs_list,
+            'total_documents': len(docs_list),
+            'total_vectors': vectors_count
+        })
     except Exception as e:
         return jsonify({
             'success': False,

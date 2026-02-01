@@ -322,6 +322,9 @@
         <div class="menu-item" data-section="logs">
             📜 Логи запросов
         </div>
+        <div class="menu-item" data-section="documents">
+            📄 Документы
+        </div>
         <div style="flex: 1;"></div>
         <div class="menu-item" onclick="window.location.href='/'">
             🏠 Вернуться к чату
@@ -452,6 +455,39 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Section: Documents -->
+            <div class="section" id="section-documents">
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                    <div class="stat-card">
+                        <div class="stat-value" id="docsTotalDocs">0</div>
+                        <div class="stat-label">Документов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="docsTotalVectors">0</div>
+                        <div class="stat-label">Векторов</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Загруженные документы</div>
+                    <div class="table-container">
+                        <table id="documentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Файл</th>
+                                    <th>Чанков загружено</th>
+                                    <th>Всего чанков</th>
+                                    <th>Прогресс</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documentsTableBody">
+                                <!-- Documents will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -465,7 +501,8 @@
             'users': 'Управление пользователями',
             'requests': 'Запросы на доступ',
             'stats': 'Статистика',
-            'logs': 'Логи запросов'
+            'logs': 'Логи запросов',
+            'documents': 'Управление документами'
         };
         
         menuItems.forEach(item => {
@@ -488,6 +525,7 @@
                 if (section === 'requests') loadAccessRequests();
                 if (section === 'stats') loadStats();
                 if (section === 'logs') loadLogs();
+                if (section === 'documents') loadDocuments();
             });
         });
         
@@ -755,6 +793,63 @@
                 }
             } catch (error) {
                 showAlert('Ошибка: ' + error.message, 'error');
+            }
+        }
+        
+        // Load documents
+        async function loadDocuments() {
+            try {
+                const response = await fetch('/api/admin/documents');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Обновляем статистику
+                    document.getElementById('docsTotalDocs').textContent = data.total_documents;
+                    document.getElementById('docsTotalVectors').textContent = data.total_vectors;
+                    
+                    const tbody = document.getElementById('documentsTableBody');
+                    
+                    if (data.documents.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="4">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">📄</div>
+                                        <div>Документов пока нет</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        tbody.innerHTML = data.documents.map(doc => {
+                            const progress = doc.total_chunks > 0 
+                                ? Math.round((doc.chunks / doc.total_chunks) * 100) 
+                                : 0;
+                            
+                            return `
+                                <tr>
+                                    <td>
+                                        <strong>${doc.filename}</strong>
+                                    </td>
+                                    <td>${doc.chunks}</td>
+                                    <td>${doc.total_chunks}</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="flex: 1; background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
+                                                <div style="width: ${progress}%; height: 100%; background: #bfab8a; transition: width 0.3s;"></div>
+                                            </div>
+                                            <span style="font-size: 13px; color: #6b7280; min-width: 40px;">${progress}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    showAlert('Ошибка загрузки документов: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка загрузки документов: ' + error.message, 'error');
             }
         }
         
