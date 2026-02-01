@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VectorStom - Админ-панель</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,17 +14,29 @@
             box-sizing: border-box;
         }
         
+        :root {
+            /* Цвета из globaldent.group */
+            --primary-gold: #bfab8a;
+            --text-dark: #2d2d2d;
+            --text-secondary: #6f6f6f;
+            --bg-white: #ffffff;
+            --bg-light: #f7f7f7;
+            --bg-lighter: #efefef;
+            --border-color: #e5e5e5;
+        }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: #f9fafb;
+            font-family: 'Open Sans', Arial, sans-serif;
+            background: var(--bg-light);
             height: 100vh;
             display: flex;
             overflow: hidden;
+            color: var(--text-dark);
         }
         
         .sidebar {
             width: 260px;
-            background: #202123;
+            background: var(--text-dark);
             color: white;
             display: flex;
             flex-direction: column;
@@ -31,8 +46,8 @@
         .sidebar-header {
             padding: 16px 12px;
             font-size: 16px;
-            font-weight: 600;
-            border-bottom: 1px solid #2a2b32;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .menu-item {
@@ -48,25 +63,25 @@
         }
         
         .menu-item:hover {
-            background: #2a2b32;
+            background: rgba(191, 171, 138, 0.1);
         }
         
         .menu-item.active {
-            background: #667eea;
+            background: var(--primary-gold);
         }
         
         .main-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: white;
+            background: var(--bg-white);
             overflow-y: auto;
         }
         
         .header {
             padding: 20px 32px;
-            border-bottom: 1px solid #e5e7eb;
-            background: white;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-white);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -74,8 +89,8 @@
         
         .header-title {
             font-size: 24px;
-            font-weight: 600;
-            color: #111827;
+            font-weight: 700;
+            color: var(--text-dark);
         }
         
         .content {
@@ -93,40 +108,40 @@
         }
         
         .stat-card {
-            background: white;
+            background: var(--bg-white);
             padding: 20px;
             border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         
         .stat-value {
             font-size: 32px;
             font-weight: 700;
-            color: #111827;
+            color: var(--primary-gold);
             margin-bottom: 4px;
         }
         
         .stat-label {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
         .card {
-            background: white;
+            background: var(--bg-white);
             border-radius: 12px;
             padding: 24px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-bottom: 24px;
         }
         
         .card-title {
             font-size: 18px;
-            font-weight: 600;
-            color: #111827;
+            font-weight: 700;
+            color: var(--text-dark);
             margin-bottom: 16px;
         }
         
@@ -154,8 +169,8 @@
         
         .form-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 0 3px rgba(191, 171, 138, 0.1);
         }
         
         .btn {
@@ -172,12 +187,13 @@
         }
         
         .btn-primary {
-            background: #667eea;
+            background: var(--primary-gold);
             color: white;
         }
         
         .btn-primary:hover {
-            background: #5568d3;
+            background: #a89270;
+            transform: translateY(-1px);
         }
         
         .btn-danger {
@@ -206,24 +222,24 @@
         th {
             text-align: left;
             padding: 12px;
-            background: #f9fafb;
-            border-bottom: 2px solid #e5e7eb;
-            font-size: 13px;
+            background: var(--bg-light);
+            border-bottom: 2px solid var(--border-color);
             font-weight: 600;
-            color: #6b7280;
+            font-size: 13px;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
         td {
             padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             font-size: 14px;
-            color: #374151;
+            color: var(--text-dark);
         }
         
         tr:hover {
-            background: #f9fafb;
+            background: rgba(191, 171, 138, 0.05);
         }
         
         .badge {
@@ -275,7 +291,7 @@
         .empty-state {
             text-align: center;
             padding: 48px;
-            color: #6b7280;
+            color: var(--text-secondary);
         }
         
         .empty-icon {
@@ -286,8 +302,8 @@
         .spinner {
             width: 20px;
             height: 20px;
-            border: 2px solid #e5e7eb;
-            border-top: 2px solid #667eea;
+            border: 2px solid var(--bg-lighter);
+            border-top: 2px solid var(--primary-gold);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
