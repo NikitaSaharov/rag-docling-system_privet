@@ -1,0 +1,28 @@
+/* Извлеченные стили с сайта */
+/* Автоматически сгенерировано parse_styles.py */
+
+:root {
+    /* Основные цвета */
+    --color-1: rgba(var(--t396-shadow-text-color);
+    --color-2: #2d2d2d;
+    --color-3: #ffffff;
+    --color-4: #bfab8a;
+    --color-5: #505050;
+    --color-6: #626262;
+    --color-7: #ff0000;
+    --color-8: #5c5c5c;
+    --color-9: #6f6f6f;
+    --color-10: #efefef;
+
+    /* Шрифты */
+    --font-1: 'Open Sans',Arial,sans-serif;
+    --font-2: var(--t-text-font,Arial);
+    --font-3: 'Open Sans';
+    --font-4: 'Open Sans',Arial,sans-serif}.t-input{font-family:'Open Sans',Arial,sans-serif}.t-input__vis-ph{font-family:'Open Sans',Arial,sans-serif}.t-select{font-family:'Open Sans',Arial,sans-serif}.t-input-error{font-family:'Open Sans',Arial,sans-serif}.t-form__errorbox-wrapper{font-family:'Open Sans',Arial,sans-serif}.t-form__errorbox-text{font-family:'Open Sans',Arial,sans-serif}.t-form__errorbox-item{font-family:'Open Sans',Arial,sans-serif}.t-form__successbox{font-family:'Open Sans',Arial,sans-serif}.t-rec_pt_0{padding-top:0}.t-rec_pb_0{padding-bottom:0}.t-btnflex,.t-btn.t-btnflex,.t-submit.t-btnflex{display:inline-flex;
+    --font-5: 'Open Sans',Arial,sans-serif,Arial,sans-serif;
+}
+
+/* Применение стилей */
+body {
+    font-family: 'Open Sans',Arial,sans-serif;
+}
