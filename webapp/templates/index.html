@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VectorStom</title>
+    <link rel="icon" type="image/webp" href="{{ url_for('static', filename='favicon.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -27,7 +28,7 @@
         
         body {
             font-family: 'Open Sans', Arial, sans-serif;
-            background: var(--bg-light);
+            background: var(--bg-white);
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -47,8 +48,41 @@
             padding: 16px 32px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 16px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+        
+        .burger-menu {
+            display: flex;
+            width: 32px;
+            height: 32px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .burger-line {
+            width: 24px;
+            height: 2px;
+            background: var(--text-dark);
+            transition: all 0.3s;
+            border-radius: 2px;
+        }
+        
+        .burger-menu.active .burger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .burger-menu.active .burger-line:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .burger-menu.active .burger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
         }
         
         .logo {
@@ -398,6 +432,12 @@
             left: 0;
             top: 0;
             z-index: 1001;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar.mobile-hidden {
+            transform: translateX(-100%);
+        }
             transition: transform 0.3s;
         }
         
@@ -410,11 +450,62 @@
             border-bottom: 1px solid var(--border-color);
         }
         
-        .sidebar-user {
+        .sidebar-user-info {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-light);
+        }
+        
+        .sidebar-user-email {
+            font-size: 14px;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .sidebar-logout-btn {
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             font-size: 13px;
             color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sidebar-logout-btn:hover {
+            border-color: var(--primary-gold);
+            color: var(--primary-gold);
+        }
+        
+        .sidebar-auth-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-gold);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sidebar-auth-btn:hover {
+            background: #a89270;
+        }
+        
+        .sidebar-branding {
+            font-size: 20px;
+            font-weight: 700;
             margin-bottom: 12px;
-            word-break: break-all;
+            color: var(--text-dark);
+        }
+        
+        .sidebar-branding .brand-accent {
+            color: var(--primary-gold);
         }
         
         .new-chat-btn {
@@ -534,6 +625,30 @@
             width: 90%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: modalSlideIn 0.3s;
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-light);
+            color: var(--text-dark);
         }
         
         @keyframes modalSlideIn {
@@ -696,19 +811,46 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
+        /* Mobile overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
         /* Mobile Responsive */
         @media (max-width: 768px) {
+            .burger-menu {
+                display: flex;
+            }
+            
             .glass-header {
                 padding: 12px 16px;
             }
             
             .logo {
-                font-size: 20px;
+                font-size: 18px;
             }
             
-            .admin-link {
-                padding: 6px 12px;
-                font-size: 12px;
+            .user-email {
+                display: none;
+            }
+            
+            .sidebar {
+                z-index: 1002;
+            }
+            
+            .sidebar.mobile-hidden {
+                transform: translateX(-100%);
             }
             
             .messages-container {
@@ -745,33 +887,48 @@
                 font-size: 22px;
             }
         }
-            .empty-title {
-                font-size: 20px;
-            }
-        }
     </style>
 </head>
 <body>
-    <!-- Glassmorphism Header -->
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Mobile Header с бургер-меню -->
     <header class="glass-header">
+        <button class="burger-menu" id="burgerMenu">
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+        </button>
         <div class="logo">
             <span class="logo-accent">Vector</span>Stom
         </div>
-        <div>
-            <button class="auth-button" id="authButton" onclick="showModal('loginModal')">Войти</button>
-            <div class="user-menu" id="userMenu" style="display: none;">
-                <span class="user-email" id="userEmail"></span>
-                <button class="logout-btn" id="logoutBtn">Выйти</button>
-            </div>
-        </div>
     </header>
     
-    <!-- Sidebar и модальные окна -->
-    <div class="sidebar hidden" id="sidebar">
+    <!-- Sidebar -->
+    <div class="sidebar mobile-hidden" id="sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-user" id="sidebarEmail">user@example.com</div>
-            <button class="new-chat-btn" id="newChatBtn">+ Новый чат</button>
+            <div class="sidebar-branding">
+                <span class="brand-accent">VECTOR</span> STOM
+            </div>
         </div>
+        
+        <!-- Информация о пользователе -->
+        <div class="sidebar-user-info" id="sidebarUserInfo" style="display: none;">
+            <div class="sidebar-user-email" id="sidebarUserEmail"></div>
+            <button class="sidebar-logout-btn" id="sidebarLogoutBtn">Выйти</button>
+        </div>
+        
+        <!-- Кнопка входа для неавторизованных -->
+        <div class="sidebar-user-info" id="sidebarAuthSection" style="display: block;">
+            <button class="sidebar-auth-btn" onclick="showModal('loginModal'); closeSidebarOnMobile();">Войти</button>
+        </div>
+        
+        <!-- Кнопка нового диалога -->
+        <div style="padding: 12px 20px;">
+            <button class="new-chat-btn" id="newChatBtn">+ Новый диалог</button>
+        </div>
+        
         <div class="sessions-list" id="sessionsList">
             <!-- Список сессий генерируется динамически -->
         </div>
@@ -780,6 +937,7 @@
     <!-- Модальное окно входа -->
     <div class="modal" id="loginModal">
         <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('loginModal')">×</button>
             <div class="modal-header">
                 <div class="modal-title">Вход</div>
                 <div class="modal-subtitle">Войдите, чтобы продолжить</div>
@@ -805,6 +963,7 @@
     <!-- Модальное окно регистрации -->
     <div class="modal" id="registerModal">
         <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('registerModal')">×</button>
             <div class="modal-header">
                 <div class="modal-title">Регистрация</div>
                 <div class="modal-subtitle">Создайте новый аккаунт</div>
@@ -833,6 +992,7 @@
     <!-- Модальное окно верификации email -->
     <div class="modal" id="verifyEmailModal">
         <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('verifyEmailModal')">×</button>
             <div class="modal-header">
                 <div class="modal-title">Подтверждение email</div>
                 <div class="modal-subtitle">Введите код из письма</div>
@@ -857,6 +1017,7 @@
     <!-- Модальное окно восстановления пароля (шаг 1 - ввод email) -->
     <div class="modal" id="forgotPasswordModal">
         <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('forgotPasswordModal')">×</button>
             <div class="modal-header">
                 <div class="modal-title">Восстановление пароля</div>
                 <div class="modal-subtitle">Введите ваш email</div>
@@ -877,6 +1038,7 @@
     <!-- Модальное окно восстановления пароля (шаг 2 - ввод кода) -->
     <div class="modal" id="verifyResetCodeModal">
         <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('verifyResetCodeModal')">×</button>
             <div class="modal-header">
                 <div class="modal-title">Проверка кода</div>
                 <div class="modal-subtitle">Введите код из письма</div>
@@ -896,6 +1058,7 @@
     <!-- Модальное окно восстановления пароля (шаг 3 - новый пароль) -->
     <div class="modal" id="resetPasswordModal">
         <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('resetPasswordModal')">×</button>
             <div class="modal-header">
                 <div class="modal-title">Новый пароль</div>
                 <div class="modal-subtitle">Придумайте новый пароль</div>
@@ -918,8 +1081,8 @@
         <div class="messages-container" id="messagesContainer">
             <div class="empty-state" id="emptyState">
                 <div class="empty-icon">💬</div>
-                <div class="empty-title">Привет!</div>
-                <div class="empty-text">Я помогу найти информацию в ваших документах.<br>Задайте мне вопрос.</div>
+                <div class="empty-title">Я VECTOR</div>
+                <div class="empty-text">Ваш личный помощник в поиске управленческих и организационных решений.<br>Задайте мне вопрос.</div>
             </div>
         </div>
         
@@ -945,7 +1108,28 @@
         let isLoading = false;
         let chatHistory = []; // История чата (последние 3 пары вопрос-ответ)
         
-        // Removed sidebar code - now using glassmorphism header
+        // Burger menu functionality
+        const burgerMenu = document.getElementById('burgerMenu');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        
+        function toggleSidebar() {
+            sidebar.classList.toggle('mobile-hidden');
+            sidebarOverlay.classList.toggle('active');
+            burgerMenu.classList.toggle('active');
+        }
+        
+        burgerMenu.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+        
+        // Закрываем sidebar при выборе сессии на мобильных
+        window.closeSidebarOnMobile = function() {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('mobile-hidden');
+                sidebarOverlay.classList.remove('active');
+                burgerMenu.classList.remove('active');
+            }
+        }
         
         // Поиск
         document.getElementById('sendBtn').addEventListener('click', search);

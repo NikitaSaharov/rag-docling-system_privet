@@ -43,19 +43,24 @@ function initAuth() {
 }
 
 function showAuthenticatedUI() {
-    document.getElementById('authButton').style.display = 'none';
-    document.getElementById('userMenu').style.display = 'flex';
-    document.getElementById('userEmail').textContent = currentUser.email;
-    document.getElementById('sidebarEmail').textContent = currentUser.email;
-    document.getElementById('sidebar').classList.remove('hidden');
-    document.querySelector('.main-container').classList.add('with-sidebar');
+    // Sidebar
+    document.getElementById('sidebarUserInfo').style.display = 'block';
+    document.getElementById('sidebarUserEmail').textContent = currentUser.email;
+    document.getElementById('sidebarAuthSection').style.display = 'none';
+    
+    // На десктопе показываем sidebar
+    if (window.innerWidth > 768) {
+        document.getElementById('sidebar').classList.remove('mobile-hidden');
+    }
 }
 
 function showUnauthenticatedUI() {
-    document.getElementById('authButton').style.display = 'block';
-    document.getElementById('userMenu').style.display = 'none';
-    document.getElementById('sidebar').classList.add('hidden');
-    document.querySelector('.main-container').classList.remove('with-sidebar');
+    // Sidebar
+    document.getElementById('sidebarUserInfo').style.display = 'none';
+    document.getElementById('sidebarAuthSection').style.display = 'block';
+    
+    // Скрываем sidebar
+    document.getElementById('sidebar').classList.add('mobile-hidden');
 }
 
 function logout() {
@@ -108,7 +113,7 @@ function setupModalHandlers() {
     document.getElementById('resetPasswordForm')?.addEventListener('submit', handleResetPassword);
     
     // Logout
-    document.getElementById('logoutBtn')?.addEventListener('click', logout);
+    document.getElementById('sidebarLogoutBtn')?.addEventListener('click', logout);
 }
 
 function showModal(modalId) {
@@ -119,6 +124,17 @@ function showModal(modalId) {
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
     clearModalErrors(modalId);
+}
+
+function closeAllModals() {
+    const modals = ['loginModal', 'registerModal', 'verifyEmailModal', 'forgotPasswordModal', 'verifyResetCodeModal', 'resetPasswordModal'];
+    modals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('active');
+            clearModalErrors(modalId);
+        }
+    });
 }
 
 function showModalError(modalId, message) {
@@ -170,6 +186,31 @@ async function handleLogin(e) {
         const data = await res.json();
         
         if (!res.ok) {
+            // Если email не верифицирован, показываем окно верификации
+            if (data.error === 'Email not verified') {
+                // Сохраняем email и user_id
+                tempEmail = email;
+                if (data.user_id) {
+                    tempUserId = data.user_id;
+                }
+                
+                // Отправляем новый код верификации
+                try {
+                    await fetch('/api/auth/resend-verification', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email: email})
+                    });
+                } catch (e) {
+                    console.error('Failed to resend code:', e);
+                }
+                
+                closeModal('loginModal');
+                showModal('verifyEmailModal');
+                showModalSuccess('verifyEmailModal', 'Код верификации отправлен на ' + email + '. Проверьте почту (возможно в папке спам).');
+                document.getElementById('verifyEmailCode').focus();
+                return;
+            }
             throw new Error(data.error || 'Ошибка входа');
         }
         
@@ -178,7 +219,7 @@ async function handleLogin(e) {
         localStorage.setItem('auth_token', authToken);
         currentUser = data.user;
         
-        closeModal('loginModal');
+        closeAllModals();
         showAuthenticatedUI();
         loadSessions();
     } catch (error) {
@@ -273,7 +314,7 @@ async function handleVerifyEmail(e) {
         localStorage.setItem('auth_token', authToken);
         currentUser = data.user;
         
-        closeModal('verifyEmailModal');
+        closeAllModals();
         showAuthenticatedUI();
         loadSessions();
     } catch (error) {
@@ -467,6 +508,11 @@ async function loadSession(sessionId) {
         document.querySelectorAll('.session-item').forEach(item => {
             item.classList.toggle('active', parseInt(item.dataset.sessionId) === sessionId);
         });
+        
+        // Закрываем sidebar на мобильных устройствах
+        if (window.closeSidebarOnMobile) {
+            window.closeSidebarOnMobile();
+        }
         
     } catch (error) {
         console.error('Error loading session:', error);

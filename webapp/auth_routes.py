@@ -106,6 +106,25 @@ def register():
     # Проверяем, нет ли уже такого email
     existing_user = get_web_user_by_email(email)
     if existing_user:
+        # Если пользователь есть, но не верифицирован - переотправляем код
+        if not existing_user['is_verified']:
+            # Генерируем новый код
+            code = generate_code(6)
+            expires_at = datetime.now() + timedelta(minutes=15)
+            
+            if not set_verification_code(existing_user['id'], code, expires_at):
+                return jsonify({'error': 'Failed to set verification code'}), 500
+            
+            # Отправляем email
+            if not send_verification_email(email, code):
+                return jsonify({'error': 'Failed to send verification email'}), 500
+            
+            return jsonify({
+                'message': 'Verification code sent. Please check your email.',
+                'user_id': existing_user['id'],
+                'email': email
+            }), 201
+        
         return jsonify({'error': 'User with this email already exists'}), 400
     
     # Хешируем пароль
@@ -234,7 +253,10 @@ def login():
         return jsonify({'error': 'Invalid email or password'}), 401
     
     if not user['is_verified']:
-        return jsonify({'error': 'Email not verified'}), 401
+        return jsonify({
+            'error': 'Email not verified',
+            'user_id': user['id']
+        }), 401
     
     if not user['is_active']:
         return jsonify({'error': 'Account is not active'}), 401
