@@ -57,10 +57,8 @@ def format_examples_for_prompt(examples):
         formatted += f"ПРИМЕР {i}:\n\n"
         formatted += f"Вопрос:\n{ex['question']}\n\n"
         
-        # Ограничим длину ответа до 600 символов, чтобы не переполнить prompt
+        # Берем полный ответ, не обрезаем!
         answer = ex['answer']
-        if len(answer) > 600:
-            answer = answer[:600] + "...\n[ответ сокращен для примера]"
         
         formatted += f"Ответ:\n{answer}\n\n"
     
