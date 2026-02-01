@@ -667,7 +667,8 @@
         
         function parseSuggestions(text) {
             // Извлекаем suggestions из секции "Вопросы:"
-            const pattern = /Вопросы:\s*\n((?:\d+\..*?\n?)+)/m;
+            // Паттерн: "Вопросы:" с любыми пробелами/переносами, затем нумерованный список
+            const pattern = /Вопросы:\s*([\s\S]*?)(?=\n\n|$)/i;
             const match = text.match(pattern);
             
             if (!match) {
@@ -687,22 +688,28 @@
                     }
                     return { cleanText, suggestions };
                 }
+                console.log('Не найдена секция Вопросы');
                 return { cleanText: text, suggestions: [] };
             }
             
             const suggestionsBlock = match[1];
+            console.log('Найдена секция Вопросы:', suggestionsBlock);
             
             const suggestions = [];
             const lines = suggestionsBlock.trim().split('\n');
             for (const line of lines) {
                 const lineMatch = line.trim().match(/^\d+\.\s*(.+)$/);
                 if (lineMatch) {
-                    suggestions.push(lineMatch[1]);
+                    suggestions.push(lineMatch[1].trim());
                 }
             }
             
-            // Возвращаем полный текст (НЕ удаляем секцию)
-            return { cleanText: text, suggestions };
+            console.log('Извлечено вопросов:', suggestions.length);
+            
+            // УДАЛЯЕМ секцию "Вопросы:" из основного текста
+            const cleanText = text.replace(pattern, '').trim();
+            
+            return { cleanText, suggestions };
         }
         
         function addMessage(type, text, sources = null) {
