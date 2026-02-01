@@ -239,6 +239,18 @@
             background: #f3f4f6;
             border-radius: 8px;
             border-left: 3px solid #667eea;
+            display: none; /* Скрыты по умолчанию */
+        }
+        
+        .sources.visible {
+            display: block;
+        }
+        
+        .sources-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
         }
         
         .sources-title {
@@ -246,8 +258,25 @@
             font-weight: 600;
             color: #6b7280;
             text-transform: uppercase;
-            margin-bottom: 8px;
             letter-spacing: 0.5px;
+        }
+        
+        .toggle-sources-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        
+        .toggle-sources-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
         
         .source {
@@ -267,6 +296,10 @@
         .source-text {
             color: #6b7280;
             line-height: 1.5;
+        }
+        
+        .sources-container {
+            margin-top: 12px;
         }
         
         .suggestions {
@@ -704,31 +737,59 @@
             
             // Добавляем источники
             if (sources && sources.length > 0) {
+                // Кнопка показать/скрыть
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'toggle-sources-btn';
+                toggleBtn.textContent = '📚 Показать источники (' + sources.length + ')';
+                toggleBtn.style.marginTop = '12px';
+                
+                // Контейнер с источниками (скрыт по умолчанию)
                 const sourcesDiv = document.createElement('div');
-                sourcesDiv.className = 'sources';
+                sourcesDiv.className = 'sources'; // скрыт по CSS
+                
+                const header = document.createElement('div');
+                header.className = 'sources-header';
                 
                 const title = document.createElement('div');
                 title.className = 'sources-title';
                 title.textContent = 'Источники';
-                sourcesDiv.appendChild(title);
+                header.appendChild(title);
+                
+                sourcesDiv.appendChild(header);
+                
+                const sourcesContainer = document.createElement('div');
+                sourcesContainer.className = 'sources-container';
                 
                 sources.forEach(src => {
                     const sourceDiv = document.createElement('div');
                     sourceDiv.className = 'source';
                     
-                    const header = document.createElement('div');
-                    header.className = 'source-header';
-                    header.textContent = `${src.filename} \u2022 ${(src.score * 100).toFixed(0)}%`;
+                    const sourceHeader = document.createElement('div');
+                    sourceHeader.className = 'source-header';
+                    sourceHeader.textContent = `${src.filename} \u2022 ${(src.score * 100).toFixed(0)}%`;
                     
                     const text = document.createElement('div');
                     text.className = 'source-text';
                     text.textContent = src.text.substring(0, 150) + '...';
                     
-                    sourceDiv.appendChild(header);
+                    sourceDiv.appendChild(sourceHeader);
                     sourceDiv.appendChild(text);
-                    sourcesDiv.appendChild(sourceDiv);
+                    sourcesContainer.appendChild(sourceDiv);
                 });
                 
+                sourcesDiv.appendChild(sourcesContainer);
+                
+                // Обработчик клика на кнопку
+                toggleBtn.onclick = () => {
+                    sourcesDiv.classList.toggle('visible');
+                    if (sourcesDiv.classList.contains('visible')) {
+                        toggleBtn.textContent = '🔼 Скрыть источники';
+                    } else {
+                        toggleBtn.textContent = '📚 Показать источники (' + sources.length + ')';
+                    }
+                };
+                
+                content.appendChild(toggleBtn);
                 content.appendChild(sourcesDiv);
             }
             
