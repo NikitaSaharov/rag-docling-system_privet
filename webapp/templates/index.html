@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VectorStom</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,177 +14,84 @@
             box-sizing: border-box;
         }
         
+        :root {
+            /* Цвета из globaldent.group */
+            --primary-gold: #bfab8a;
+            --text-dark: #2d2d2d;
+            --text-secondary: #6f6f6f;
+            --bg-white: #ffffff;
+            --bg-light: #f7f7f7;
+            --bg-lighter: #efefef;
+            --border-color: #e5e5e5;
+        }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: #f9fafb;
+            font-family: 'Open Sans', Arial, sans-serif;
+            background: var(--bg-light);
             height: 100vh;
             display: flex;
+            flex-direction: column;
             overflow: hidden;
+            color: var(--text-dark);
         }
         
-        .sidebar {
-            width: 260px;
-            background: #202123;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            padding: 8px;
-            transition: transform 0.3s ease;
-        }
-        
-        .menu-toggle {
-            display: none;
-            width: 40px;
-            height: 40px;
-            background: #667eea;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-        
-        .menu-toggle:hover {
-            background: #5568d3;
-        }
-        
-        .menu-toggle:active {
-            transform: scale(0.95);
-        }
-        
-        .menu-toggle span {
-            width: 20px;
-            height: 2.5px;
-            background: white;
-            border-radius: 2px;
-            transition: all 0.3s;
-        }
-        
-        .overlay {
-            display: none;
-            position: fixed;
+        /* Glassmorphism Header */
+        .glass-header {
+            position: sticky;
             top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(229, 229, 229, 0.3);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
         }
         
-        .sidebar-header {
-            padding: 12px;
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: -0.5px;
+        }
+        
+        .logo-accent {
+            color: var(--primary-gold);
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .admin-link {
+            padding: 8px 16px;
+            background: var(--primary-gold);
+            color: var(--bg-white);
+            text-decoration: none;
+            border-radius: 6px;
             font-size: 14px;
             font-weight: 600;
-            color: #8e8ea0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            transition: all 0.2s;
         }
         
-        .documents-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 4px;
-        }
-        
-        .doc-item {
-            padding: 10px 12px;
-            margin-bottom: 4px;
-            background: transparent;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #ececf1;
-            transition: background 0.2s;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .doc-item:hover {
-            background: #2a2b32;
-        }
-        
-        .doc-icon {
-            opacity: 0.6;
-        }
-        
-        .doc-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        .doc-chunks {
-            font-size: 11px;
-            color: #8e8ea0;
-        }
-        
-        .sidebar-footer {
-            padding: 12px;
-            border-top: 1px solid #2a2b32;
-            font-size: 12px;
-            color: #8e8ea0;
-        }
-        
-        .stat-line {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
+        .admin-link:hover {
+            background: #a89270;
+            transform: translateY(-1px);
         }
         
         .main-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: white;
-        }
-        
-        .chat-header {
-            padding: 16px 24px;
-            border-bottom: 1px solid #e5e7eb;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-        
-        .chat-header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .chat-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #111827;
-        }
-        
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: #6b7280;
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            background: var(--bg-white);
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
         }
         
         .messages-container {
@@ -214,11 +124,11 @@
         }
         
         .message.user .message-avatar {
-            background: #667eea;
+            background: linear-gradient(135deg, var(--primary-gold) 0%, #a89270 100%);
         }
         
         .message.assistant .message-avatar {
-            background: #10b981;
+            background: linear-gradient(135deg, var(--text-dark) 0%, var(--text-secondary) 100%);
         }
         
         .message-content {
@@ -236,9 +146,9 @@
         .sources {
             margin-top: 16px;
             padding: 12px;
-            background: #f3f4f6;
+            background: var(--bg-light);
             border-radius: 8px;
-            border-left: 3px solid #667eea;
+            border-left: 3px solid var(--primary-gold);
             display: none; /* Скрыты по умолчанию */
         }
         
@@ -256,27 +166,27 @@
         .sources-title {
             font-size: 12px;
             font-weight: 600;
-            color: #6b7280;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
         .toggle-sources-btn {
             padding: 6px 12px;
-            background: white;
-            border: 1px solid #d1d5db;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 12px;
-            color: #667eea;
+            color: var(--primary-gold);
             cursor: pointer;
             transition: all 0.2s;
             font-weight: 600;
         }
         
         .toggle-sources-btn:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
+            background: var(--primary-gold);
+            color: var(--bg-white);
+            border-color: var(--primary-gold);
         }
         
         .source {
@@ -289,12 +199,12 @@
         
         .source-header {
             font-weight: 600;
-            color: #111827;
+            color: var(--text-dark);
             margin-bottom: 4px;
         }
         
         .source-text {
-            color: #6b7280;
+            color: var(--text-secondary);
             line-height: 1.5;
         }
         
@@ -305,15 +215,15 @@
         .suggestions {
             margin-top: 16px;
             padding: 12px;
-            background: #f0fdf4;
+            background: rgba(191, 171, 138, 0.08);
             border-radius: 8px;
-            border-left: 3px solid #10b981;
+            border-left: 3px solid var(--primary-gold);
         }
         
         .suggestions-title {
             font-size: 12px;
             font-weight: 600;
-            color: #059669;
+            color: var(--primary-gold);
             margin-bottom: 8px;
         }
         
@@ -322,12 +232,12 @@
             width: 100%;
             padding: 10px 12px;
             margin-bottom: 6px;
-            background: white;
-            border: 1px solid #d1fae5;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 14px;
             text-align: left;
-            color: #047857;
+            color: var(--text-dark);
             cursor: pointer;
             transition: all 0.2s;
             font-family: inherit;
@@ -338,8 +248,8 @@
         }
         
         .suggestion-btn:hover {
-            background: #d1fae5;
-            border-color: #10b981;
+            background: rgba(191, 171, 138, 0.1);
+            border-color: var(--primary-gold);
             transform: translateX(4px);
         }
         
@@ -376,8 +286,8 @@
         
         .input-field:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 0 3px rgba(191, 171, 138, 0.1);
         }
         
         .send-button {
@@ -386,7 +296,7 @@
             bottom: 8px;
             width: 36px;
             height: 36px;
-            background: #667eea;
+            background: var(--primary-gold);
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -397,7 +307,8 @@
         }
         
         .send-button:hover:not(:disabled) {
-            background: #5568d3;
+            background: #a89270;
+            transform: translateY(-1px);
         }
         
         .send-button:disabled {
@@ -408,8 +319,8 @@
         .spinner {
             width: 20px;
             height: 20px;
-            border: 2px solid #e5e7eb;
-            border-top: 2px solid #667eea;
+            border: 2px solid var(--bg-lighter);
+            border-top: 2px solid var(--primary-gold);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -425,53 +336,42 @@
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: #6b7280;
+            color: var(--text-secondary);
             text-align: center;
             padding: 48px;
         }
         
         .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
+            font-size: 64px;
+            margin-bottom: 24px;
+            filter: grayscale(0.3);
         }
         
         .empty-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 8px;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
         }
         
         .empty-text {
-            font-size: 15px;
+            font-size: 16px;
+            line-height: 1.6;
         }
         
         /* Mobile Responsive */
         @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                z-index: 1000;
-                transform: translateX(-100%);
-                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            .glass-header {
+                padding: 12px 16px;
             }
             
-            .sidebar.open {
-                transform: translateX(0);
+            .logo {
+                font-size: 20px;
             }
             
-            .menu-toggle {
-                display: flex;
-            }
-            
-            .overlay.active {
-                display: block;
-            }
-            
-            .chat-header {
-                padding: 16px;
+            .admin-link {
+                padding: 6px 12px;
+                font-size: 12px;
             }
             
             .messages-container {
@@ -480,7 +380,6 @@
             
             .input-container {
                 padding: 12px;
-                padding-bottom: 80px;
             }
             
             .message {
@@ -502,9 +401,13 @@
             }
             
             .empty-icon {
-                font-size: 36px;
+                font-size: 48px;
             }
             
+            .empty-title {
+                font-size: 22px;
+            }
+        }
             .empty-title {
                 font-size: 20px;
             }
@@ -512,43 +415,18 @@
     </style>
 </head>
 <body>
-    <!-- Overlay -->
-    <div class="overlay" id="overlay"></div>
-    
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">Документы</div>
-        <div class="documents-container" id="documentsList">
-            <!-- Documents will be loaded here -->
+    <!-- Glassmorphism Header -->
+    <header class="glass-header">
+        <div class="logo">
+            <span class="logo-accent">Vector</span>Stom
         </div>
-        <div class="sidebar-footer">
-            <div class="stat-line">
-                <span>Документов:</span>
-                <span id="docsCount">0</span>
-            </div>
-            <div class="stat-line">
-                <span>Векторов:</span>
-                <span id="vectorsCount">0</span>
-            </div>
+        <div class="header-actions">
+            <a href="/admin" class="admin-link">🛠️ Админ-панель</a>
         </div>
-    </div>
+    </header>
     
     <!-- Main Chat Area -->
     <div class="main-container">
-        <div class="chat-header">
-            <div class="chat-header-left">
-                <button class="menu-toggle" id="menuToggle">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <div class="chat-title">VectorStom</div>
-            </div>
-            <div class="status-indicator">
-                <div class="status-dot"></div>
-                <span>Online</span>
-            </div>
-        </div>
         
         <div class="messages-container" id="messagesContainer">
             <div class="empty-state" id="emptyState">
@@ -580,25 +458,7 @@
         let isLoading = false;
         let chatHistory = []; // История чата (последние 3 пары вопрос-ответ)
         
-        // Mobile menu toggle
-        const menuToggle = document.getElementById('menuToggle');
-        const sidebar = document.querySelector('.sidebar');
-        const overlay = document.getElementById('overlay');
-        
-        function toggleMenu() {
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
-        
-        menuToggle.addEventListener('click', toggleMenu);
-        overlay.addEventListener('click', toggleMenu);
-        
-        // Закрываем меню при клике на документ
-        document.getElementById('documentsList').addEventListener('click', (e) => {
-            if (window.innerWidth <= 768 && e.target.closest('.doc-item')) {
-                toggleMenu();
-            }
-        });
+        // Removed sidebar code - now using glassmorphism header
         
         // Поиск
         document.getElementById('sendBtn').addEventListener('click', search);
@@ -859,51 +719,7 @@
             return id;
         }
         
-        // Загрузка списка документов
-        async function loadDocuments() {
-            try {
-                const response = await fetch('/api/documents');
-                const data = await response.json();
-                
-                document.getElementById('docsCount').textContent = data.documents.length;
-                
-                const list = document.getElementById('documentsList');
-                if (data.documents.length === 0) {
-                    list.innerHTML = '<div style="padding: 12px; color: #8e8ea0; font-size: 12px; text-align: center;">Пусто</div>';
-                } else {
-                    list.innerHTML = data.documents.map(doc => `
-                        <div class="doc-item">
-                            <span class="doc-icon">📄</span>
-                            <span class="doc-name" title="${doc.filename}">${doc.filename}</span>
-                            <span class="doc-chunks">${doc.chunks}</span>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки документов:', error);
-            }
-        }
-        
-        // Загрузка статистики
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/stats');
-                const data = await response.json();
-                document.getElementById('vectorsCount').textContent = data.qdrant.vectors_count;
-            } catch (error) {
-                console.error('Ошибка загрузки статистики:', error);
-            }
-        }
-        
-        // Загружаем данные при старте
-        loadDocuments();
-        loadStats();
-        
-        // Автообновление каждые 30 секунд
-        setInterval(() => {
-            loadDocuments();
-            loadStats();
-        }, 30000);
+        // Documents list moved to admin panel - /admin
     </script>
 </body>
 </html>
