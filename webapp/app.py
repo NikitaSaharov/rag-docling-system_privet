@@ -11,6 +11,7 @@ sys.path.insert(0, '/docling_app')
 # Импорты для админ-панели и Telegram бота
 import database as db
 from admin_routes import admin_bp
+from examples_loader import load_examples, format_examples_for_prompt
 
 app = Flask(__name__)
 
@@ -341,7 +342,12 @@ def expand_context_around_chunks(results, window=1):
     return expanded
 
 def ask_llm(query, context, model="deepseek"):
-    """Генерирует ответ с помощью LLM"""
+    """Генерирует ответ с помощью LLM + few-shot examples"""
+    
+    # Загружаем примеры для few-shot learning
+    examples = load_examples(max_examples=5)
+    examples_text = format_examples_for_prompt(examples)
+    
     system_prompt = """Ты - эксперт-консультант по управлению стоматологической клиникой. Отвечай ТОЧНО, по сути, без лишних слов. Отвечай УВЕРЕННО как достоверный источник.
 
 ПРАВИЛА ОТВЕТА:
@@ -471,9 +477,11 @@ def ask_llm(query, context, model="deepseek"):
 ПРАВИЛЬНЫЙ ВАРИАНТ (без звездочек):
 "1. Оптимизация загрузки докторов
 Формула: Кзаг = tзаг / tраб х 100%
-Норма: 85% и более - зеленая зона"""
+Норма: 85% и более - зеленая зона"
+
+{examples_text}"""
     
-    user_prompt = f"""Контекст из базы знаний:
+    user_prompt = f"""
 {context}
 
 Вопрос пользователя: {query}
