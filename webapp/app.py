@@ -90,6 +90,24 @@ def search_documents(query, limit=50):
                 result["score"] += size_boost
                 print(f"Small doc boost: {filename} ({total_chunks} chunks) +{size_boost}")
             
+            # BOOST для запросов о должностях/ролях (обязанности, функции)
+            job_titles = ['директор', 'координатор', 'администратор', 'доктор', 'врач', 'медсестра', 'ассистент']
+            responsibility_keywords = ['обязанност', 'обеспечивает', 'отвечает за', 'контролирует', 'управляет']
+            
+            is_job_query = any(job in query_lower for job in job_titles)
+            if is_job_query:
+                # Если чанк содержит описание обязанностей - даем большой boost
+                has_responsibilities = any(kw in text_lower for kw in responsibility_keywords)
+                if has_responsibilities:
+                    # Проверяем, что это НЕ таблица (таблицы содержат много повторов "|")
+                    pipe_count = text.count('|')
+                    is_table = pipe_count > 20  # Более 20 "|" - вероятно таблица
+                    
+                    if not is_table:
+                        job_boost = 0.3  # Сильный boost
+                        result["score"] += job_boost
+                        print(f"Job responsibilities boost: {filename} (chunk {result['payload']['chunk_index']}) +{job_boost}")
+            
             # ОЧЕНЬ СИЛЬНЫЙ boost для чанков с ОПРЕДЕЛЕНИЯМИ ("Что такое X?")
             is_definition_query = any(kw in query_lower for kw in ['что такое', 'что это', 'определение', 'это такое'])
             if is_definition_query:
