@@ -104,8 +104,7 @@ def search_documents(query, limit=50):
             'справочник': ('Справочник', 0.3),  # Сильный boost
             'золотой стандарт': ('Золотой Стандарт', 0.3),
             'ссп': ('Справочник', 0.2),  # Аббревиатура
-            'пир': ('ПИР', 0.05),
-            'директор': ('Директор', 0.1)
+            'пир': ('ПИР', 0.15)  # Усиленный boost для ПИРов
         }
         
         # 3. Re-ranking: boost scores
@@ -176,7 +175,7 @@ def search_documents(query, limit=50):
                         print(f"Formula variable boost ({var_key}): {filename} +{var_boost}")
         
         # 4. Фильтрация по минимальному score (score threshold)
-        MIN_SCORE_THRESHOLD = 0.40  # Снизили порог для более широкого охвата
+        MIN_SCORE_THRESHOLD = 0.30  # Сниженный порог для более широкого охвата
         filtered_results = [r for r in results if r["score"] >= MIN_SCORE_THRESHOLD]
         
         # Если после фильтрации осталось слишком мало - берем лучшие даже с низким score
