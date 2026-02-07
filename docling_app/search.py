@@ -29,26 +29,6 @@ def search(query: str, limit: int = 5):
     """Гибридный поиск: semantic + keyword + boosting"""
     print(f"\n🔍 Поиск: {query}\n")
     
-    query_lower = query.lower()
-    
-    # Проверяем упоминание документа (только для конкретных документов, НЕ для директора)
-    doc_filters = {
-        'справочник': 'Справочник Мудрого Руководителя',
-        'золотой стандарт': 'Золотой Стандарт Аудита'
-    }
-    
-    search_filter = None
-    for keyword, doc_pattern in doc_filters.items():
-        if keyword in query_lower:
-            search_filter = {
-                "must": [{
-                    "key": "filename",
-                    "match": {"text": doc_pattern}
-                }]
-            }
-            print(f"🎯 Фильтр по документу: {doc_pattern}")
-            break
-    
     # Получаем эмбеддинг запроса
     print("⌛ Создание эмбеддинга запроса...")
     query_embedding = get_embedding(query)
@@ -58,11 +38,9 @@ def search(query: str, limit: int = 5):
     
     search_params = {
         "vector": query_embedding,
-        "limit": limit * 2 if not search_filter else limit,
+        "limit": limit * 2,
         "with_payload": True
     }
-    if search_filter:
-        search_params["filter"] = search_filter
     
     response = requests.post(
         f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search",
@@ -76,24 +54,9 @@ def search(query: str, limit: int = 5):
         print("❌ Ничего не найдено")
         return []
     
-    # Keyword matching + boosting
-    query_lower = query.lower()
-    keyword_boosts = {
-        'справочник': ('Справочник', 0.3),
-        'золотой стандарт': ('Золотой Стандарт', 0.3),
-        'ссп': ('Справочник', 0.2),
-        'пир': ('ПИР', 0.15)  # Усилен boost для ПИРов
-    }
-    
-    # Re-ranking
+    # Re-ranking: boost для маленьких документов
     for result in results:
-        filename = result["payload"]["filename"]
         total_chunks = result["payload"]["total_chunks"]
-        
-        # Keyword boost
-        for keyword, (file_pattern, boost) in keyword_boosts.items():
-            if keyword in query_lower and file_pattern in filename:
-                result["score"] += boost
         
         # Small doc boost (<100 chunks)
         if total_chunks < 100:

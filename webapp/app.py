@@ -58,25 +58,6 @@ def search_documents(query, limit=50):
     try:
         query_lower = query.lower()
         
-        # Проверяем, упомянут ли конкретный документ (только для конкретных документов, НЕ для общих терминов)
-        doc_filters = {
-            'справочник': 'Справочник Мудрого Руководителя',
-            'золотой стандарт': 'Золотой Стандарт Аудита'
-        }
-        
-        # Если упомянут документ - фильтруем по нему
-        search_filter = None
-        for keyword, doc_pattern in doc_filters.items():
-            if keyword in query_lower:
-                search_filter = {
-                    "must": [{
-                        "key": "filename",
-                        "match": {"text": doc_pattern}
-                    }]
-                }
-                print(f"Forced filter: {doc_pattern}")
-                break
-        
         # 1. Semantic search
         query_embedding = get_embedding(query)
         if not query_embedding:
@@ -84,11 +65,9 @@ def search_documents(query, limit=50):
         
         search_params = {
             "vector": query_embedding,
-            "limit": limit * 3 if not search_filter else limit,  # Увеличили для лучшего охвата
+            "limit": limit * 3,  # Увеличили для лучшего охвата
             "with_payload": True
         }
-        if search_filter:
-            search_params["filter"] = search_filter
         
         response = requests.post(
             f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search",
@@ -97,28 +76,13 @@ def search_documents(query, limit=50):
         )
         results = response.json()["result"]
         
-        # 2. Keyword matching - ищем упоминания документов в запросе
-        query_lower = query.lower()
-        keyword_boosts = {
-            'справочник': ('Справочник', 0.3),  # Сильный boost
-            'золотой стандарт': ('Золотой Стандарт', 0.3),
-            'ссп': ('Справочник', 0.2),  # Аббревиатура
-            'пир': ('ПИР', 0.15)  # Усиленный boost для ПИРов
-        }
-        
-        # 3. Re-ranking: boost scores
+        # 2. Re-ranking: boost scores
         import re
         for result in results:
             filename = result["payload"]["filename"]
             total_chunks = result["payload"]["total_chunks"]
             text = result["payload"]["text"]
             text_lower = text.lower()
-            
-            # Boost для keyword match
-            for keyword, (file_pattern, boost) in keyword_boosts.items():
-                if keyword in query_lower and file_pattern in filename:
-                    result["score"] += boost
-                    print(f"Keyword boost: {filename} +{boost}")
             
             # Boost для маленьких документов (<100 chunks)
             if total_chunks < 100:
