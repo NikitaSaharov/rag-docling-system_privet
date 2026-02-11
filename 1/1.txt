@@ -1,24 +1,63 @@
-# Создать .env файл с API ключом
-cat > .env << 'EOF'
-POLZA_API_KEY=ak_VdTnWuDz1CZGLuiiRH5qt34PlZQYx0NqROscaGPneIY
-EOF
-
-# Загрузить переменные
-export $(cat .env | xargs)
-
-# Проверить
-echo $POLZA_API_KEY
-
-
-
-
-
-
-# Создать Docker volume для Qdrant
-docker volume create vectorstom_qdrant_data
-
-# Восстановить векторы из бэкапа
-docker run --rm \
-  -v vectorstom_qdrant_data:/qdrant/storage \
-  -v /root/vectorstom/qdrant-backup.tar.gz:/backup.tar.gz \
-  alpine sh -c "cd / && tar -xzf /backup.tar.gz"
+total 452K
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 1
+-rw-r--r-- 1 root root  11K Feb 11 21:15 AGENTS.md
+-rw-r--r-- 1 root root  32K Feb 11 21:15 ARCHITECTURE.md
+-rw-r--r-- 1 root root 7.9K Feb 11 21:15 AUTH_SETUP.md
+-rw-r--r-- 1 root root 9.1K Feb 11 21:15 CONCURRENCY.md
+-rw-r--r-- 1 root root 8.0K Feb 11 21:15 DEPLOY.md
+-rw-r--r-- 1 root root 9.7K Feb 11 21:15 DEPLOYMENT.md
+-rw-r--r-- 1 root root 6.0K Feb 11 21:15 DEPLOY_CHECKLIST.md
+-rw-r--r-- 1 root root 6.5K Feb 11 21:15 DEPLOY_FROM_GITHUB.md
+-rw-r--r-- 1 root root  43K Feb 11 21:15 DOCUMENTATION.md
+-rw-r--r-- 1 root root 4.8K Feb 11 21:15 DOWNLOAD_BACKUP.md
+-rw-r--r-- 1 root root  926 Feb 11 21:15 Dockerfile.prod
+-rw-r--r-- 1 root root 2.5K Feb 11 21:15 MOBILE_ACCESS.md
+-rw-r--r-- 1 root root 5.3K Feb 11 21:15 NEXT_STEPS.md
+-rw-r--r-- 1 root root 5.1K Feb 11 21:15 ONLINE_ACCESS.md
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 Parser
+-rw-r--r-- 1 root root 3.3K Feb 11 21:15 QUICK_ANSWER.md
+-rw-r--r-- 1 root root 4.2K Feb 11 21:15 QUICK_SETUP.md
+-rw-r--r-- 1 root root 2.5K Feb 11 21:15 QUICK_START_BOT.md
+-rw-r--r-- 1 root root 4.5K Feb 11 21:15 README.md
+-rw-r--r-- 1 root root 9.4K Feb 11 21:15 SETUP_INSTRUCTIONS.txt
+-rw-r--r-- 1 root root  11K Feb 11 21:15 TELEGRAM_BOT_README.md
+-rw-r--r-- 1 root root 5.3K Feb 11 21:15 USAGE.md
+-rw-r--r-- 1 root root 7.1K Feb 11 21:15 USER_GUIDE.md
+-rw-r--r-- 1 root root 1.2K Feb 11 21:15 add_document.ps1
+-rw-r--r-- 1 root root  629 Feb 11 21:15 backup_qdrant.sh
+-rw-r--r-- 1 root root 2.0K Feb 11 21:15 check_status.ps1
+-rw-r--r-- 1 root root 4.5K Feb 11 21:15 deploy_to_vps.sh
+-rw-r--r-- 1 root root 1.6K Feb 11 21:15 docker-compose.prod.yml
+-rw-r--r-- 1 root root 1.2K Feb 11 21:15 docker-compose.simple-prod.yml
+-rw-r--r-- 1 root root 3.3K Feb 11 21:15 docker-compose.yml
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 docling_app
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 documents
+-rw-r--r-- 1 root root 1.1K Feb 11 21:15 find_all_normochas.py
+-rw-r--r-- 1 root root 1.8K Feb 11 21:15 find_definition_chunk.py
+-rw-r--r-- 1 root root  730 Feb 11 21:15 generate_secrets.py
+-rw-r--r-- 1 root root 1.9K Feb 11 21:15 get_chunk.py
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 img
+drwxr-xr-x 4 root root 4.0K Feb 11 21:15 methodology
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 nginx
+-rw-r--r-- 1 root root 2.7K Feb 11 21:15 nginx-simple.conf
+-rw-r--r-- 1 root root 1.2K Feb 11 21:15 open_port_5000.ps1
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 output
+-rw-r--r-- 1 root root 2.2K Feb 11 21:15 parse_table.py
+-rw-r--r-- 1 root root 2.2K Feb 11 21:15 process.ps1
+-rw-r--r-- 1 root root 1.2K Feb 11 21:15 quick_start.md
+-rw-r--r-- 1 root root   68 Feb 11 21:15 requirements.txt
+-rw-r--r-- 1 root root  202 Feb 11 21:15 search.ps1
+-rw-r--r-- 1 root root  964 Feb 11 21:15 setup.sh
+-rw-r--r-- 1 root root 5.2K Feb 11 21:15 setup_auth.ps1
+drwxr-xr-x 3 root root 4.0K Feb 11 21:15 shared
+-rw-r--r-- 1 root root 3.1K Feb 11 21:15 start_with_ngrok.ps1
+drwxr-xr-x 2 root root 4.0K Feb 11 21:15 telegram_bot
+-rw-r--r-- 1 root root 2.2K Feb 11 21:15 test_normochas_search.py
+-rw-r--r-- 1 root root  639 Feb 11 21:15 test_polza.py
+-rw-r--r-- 1 root root 1.6K Feb 11 21:15 test_search.py
+-rw-r--r-- 1 root root 1.7K Feb 11 21:15 test_webapp_search.py
+-rw-r--r-- 1 root root  54K Feb 11 21:15 vectorstom.zip
+drwxr-xr-x 4 root root 4.0K Feb 11 21:15 webapp
+-rw-r--r-- 1 root root 1.1K Feb 11 21:15 вот.txt
+root@6618353-gu411620:/opt/docling# ^C
+root@6618353-gu411620:/opt/docling# 

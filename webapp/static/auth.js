@@ -569,15 +569,20 @@ async function deleteSession(sessionId) {
 // Переопределяем глобальную функцию search для работы с авторизацией
 window.originalSearch = window.search;
 window.search = async function() {
-    // Проверяем авторизацию
-    if (!authToken) {
-        showModal('loginModal');
-        return;
-    }
-    
     const input = document.getElementById('queryInput');
     const query = input.value.trim();
     if (!query || window.isLoading) return;
+
+    // Проверяем авторизацию — без токена показываем окно входа и подсказку в чате
+    if (!authToken) {
+        showModal('loginModal');
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.style.display = 'none';
+        addMessage('user', query);
+        input.value = '';
+        addMessage('assistant', 'Войдите в аккаунт, чтобы задать вопрос (кнопка «Войти» вверху).');
+        return;
+    }
     
     // Скрываем empty state
     const emptyState = document.querySelector('.empty-state');
@@ -593,7 +598,6 @@ window.search = async function() {
     const loadingId = addLoadingMessage();
     
     try {
-        // Отправляем запрос
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: {
@@ -607,23 +611,25 @@ window.search = async function() {
         });
         
         const data = await response.json();
-        
-        // Удаляем загрузку
         document.getElementById(loadingId).remove();
+
+        if (!response.ok) {
+            const errText = data.error || data.message || `Ошибка ${response.status}`;
+            addMessage('assistant', '⚠️ ' + errText + (response.status === 401 ? ' Войдите снова.' : ''));
+            return;
+        }
+
+        const answer = data.answer != null ? data.answer : 'Нет ответа от сервера.';
+        addMessage('assistant', answer, data.sources);
         
-        // Добавляем ответ
-        addMessage('assistant', data.answer, data.sources);
-        
-        // Обновляем currentSessionId если создана новая сессия
         if (data.session_id) {
             currentSessionId = data.session_id;
-            // Перезагружаем список сессий
             await loadSessions();
         }
         
     } catch (error) {
         document.getElementById(loadingId).remove();
-        addMessage('assistant', 'Ошибка: ' + error.message);
+        addMessage('assistant', 'Ошибка соединения: ' + error.message);
     } finally {
         window.isLoading = false;
         document.getElementById('sendBtn').disabled = false;
