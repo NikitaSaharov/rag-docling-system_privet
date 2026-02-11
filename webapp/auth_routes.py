@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+﻿from flask import Blueprint, request, jsonify, session
 import bcrypt
 import jwt
 import os
@@ -18,7 +18,7 @@ auth_bp = Blueprint('auth', __name__)
 # JWT Configuration
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', secrets.token_hex(32))
 JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = 168  # 7 дней
 
 # Bcrypt cost factor
 BCRYPT_ROUNDS = 12
@@ -63,7 +63,7 @@ def jwt_required(f):
         token = request.headers.get('Authorization')
         
         if not token:
-            return jsonify({'error': 'Token is missing'}), 401
+            return jsonify({'error': 'Требуется авторизация. Войдите в аккаунт.'}), 401
         
         # Убираем "Bearer " если есть
         if token.startswith('Bearer '):
@@ -71,7 +71,7 @@ def jwt_required(f):
         
         payload = decode_jwt_token(token)
         if not payload:
-            return jsonify({'error': 'Invalid or expired token'}), 401
+            return jsonify({'error': 'Сессия истекла. Войдите в аккаунт снова.'}), 401
         
         # Добавляем данные пользователя в request
         request.user_id = payload['user_id']
