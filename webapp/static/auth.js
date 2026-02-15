@@ -275,6 +275,7 @@ async function handleRegister(e) {
 
 let tempUserId = null;
 let tempEmail = null;
+let tempResetCode = null;
 
 async function handleResendCode() {
     if (!tempEmail) {
@@ -381,8 +382,6 @@ async function handleVerifyResetCode(e) {
         showModalError('verifyResetCodeModal', error.message);
     }
 }
-
-let tempResetCode = null;
 
 async function handleResetPassword(e) {
     e.preventDefault();
