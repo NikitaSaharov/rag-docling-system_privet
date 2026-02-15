@@ -5,11 +5,20 @@ let currentSessionId = null;
 let sessions = [];
 
 // Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
+// Проверяем состояние DOM - если скрипт загружен после DOMContentLoaded,
+// событие уже произошло и обработчик не вызовется
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initAuth();
+        setupModalHandlers();
+        setupSidebar();
+    });
+} else {
+    // DOM уже готов - вызываем сразу
     initAuth();
     setupModalHandlers();
     setupSidebar();
-});
+}
 
 // ============ АВТОРИЗАЦИЯ ============
 

@@ -320,14 +320,108 @@
         .section.active {
             display: block;
         }
+        
+        /* Login Modal */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .login-overlay.hidden {
+            display: none;
+        }
+        
+        .login-modal {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+        
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        
+        .login-error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .login-error.show {
+            display: block;
+        }
+        
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
     </style>
 </head>
 <body>
+    <!-- Login Overlay -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-modal">
+            <div class="login-title">🔐 Вход в админ-панель</div>
+            <div class="login-subtitle">VectorStom Admin</div>
+            <div class="login-error" id="loginError"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Логин</label>
+                    <input type="text" id="loginUsername" class="form-input" placeholder="Введите логин" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="Введите пароль" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Войти</button>
+            </form>
+        </div>
+    </div>
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header">VectorStom Admin</div>
-        <div class="menu-item active" data-section="users">
-            👥 Пользователи
+        <div class="menu-item active" data-section="telegram-users">
+            📱 Telegram
+        </div>
+        <div class="menu-item" data-section="web-users">
+            🌐 Web
         </div>
         <div class="menu-item" data-section="stats">
             📊 Статистика
@@ -345,6 +439,9 @@
         <div class="menu-item" onclick="window.location.href='/'">
             🏠 Вернуться к чату
         </div>
+        <button class="logout-btn" onclick="adminLogout()">
+            🚪 Выйти
+        </button>
     </div>
     
     <!-- Main Content -->
@@ -357,10 +454,10 @@
             <!-- Alert -->
             <div id="alert" class="alert"></div>
             
-            <!-- Section: Users -->
-            <div class="section active" id="section-users">
+            <!-- Section: Telegram Users -->
+            <div class="section active" id="section-telegram-users">
                 <div class="card">
-                    <div class="card-title">Добавить пользователя</div>
+                    <div class="card-title">Добавить Telegram пользователя</div>
                     <form id="addUserForm">
                         <div class="form-group">
                             <label class="form-label">Номер телефона</label>
@@ -379,7 +476,7 @@
                 </div>
                 
                 <div class="card">
-                    <div class="card-title">Список пользователей</div>
+                    <div class="card-title">📱 Telegram пользователи</div>
                     <div class="table-container">
                         <table id="usersTable">
                             <thead>
@@ -395,6 +492,31 @@
                             </thead>
                             <tbody id="usersTableBody">
                                 <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section: Web Users -->
+            <div class="section" id="section-web-users">
+                <div class="card">
+                    <div class="card-title">🌐 Web пользователи</div>
+                    <div class="table-container">
+                        <table id="webUsersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Email</th>
+                                    <th>Имя</th>
+                                    <th>Статус</th>
+                                    <th>Верификация</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="webUsersTableBody">
+                                <!-- Web users will be loaded here -->
                             </tbody>
                         </table>
                     </div>
@@ -472,6 +594,22 @@
                 </div>
             </div>
             
+            <!-- Chat Messages Modal -->
+            <div class="modal" id="chatMessagesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                <div style="background: white; width: 90%; max-width: 800px; max-height: 80vh; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="padding: 20px; border-bottom: 1px solid #e5e5e5; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 18px; font-weight: 700;" id="chatModalTitle">Диалог</div>
+                            <div style="font-size: 13px; color: #6f6f6f;" id="chatModalSubtitle"></div>
+                        </div>
+                        <button onclick="closeChatModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6f6f6f;">×</button>
+                    </div>
+                    <div id="chatMessagesContainer" style="flex: 1; overflow-y: auto; padding: 20px; background: #f7f7f7;">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
             <!-- Section: Documents -->
             <div class="section" id="section-documents">
                 <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
@@ -514,11 +652,12 @@
         const pageTitle = document.getElementById('pageTitle');
         
         const pageTitles = {
-            'users': 'Управление пользователями',
+            'telegram-users': 'Telegram пользователи',
+            'web-users': 'Web пользователи',
             'requests': 'Запросы на доступ',
             'stats': 'Статистика',
             'logs': 'Логи запросов',
-            'documents': 'Управление документами'
+            'documents': 'Управление документами',
         };
         
         menuItems.forEach(item => {
@@ -537,7 +676,8 @@
                 pageTitle.textContent = pageTitles[section];
                 
                 // Load data
-                if (section === 'users') loadUsers();
+                if (section === 'telegram-users') loadUsers();
+                if (section === 'web-users') loadWebUsers();
                 if (section === 'requests') loadAccessRequests();
                 if (section === 'stats') loadStats();
                 if (section === 'logs') loadLogs();
@@ -615,6 +755,22 @@
                             </td>
                             <td>${new Date(user.created_at).toLocaleString('ru-RU')}</td>
                             <td>
+                                <button 
+                                    class="btn btn-primary" 
+                                    onclick="viewTelegramUserSessions(${user.id}, '${(user.username || user.phone_number).replace(/'/g, "\\'")}')"
+                                    style="padding: 6px 12px; font-size: 13px; margin-right: 4px;"
+                                    ${!user.telegram_id ? 'disabled title="Нет привязанного Telegram"' : ''}
+                                >
+                                    💬 Диалоги
+                                </button>
+                                <button 
+                                    class="btn btn-secondary" 
+                                    onclick="exportTelegramUser(${user.id})"
+                                    style="padding: 6px 12px; font-size: 13px; margin-right: 4px;"
+                                    ${!user.telegram_id ? 'disabled' : ''}
+                                >
+                                    📥 CSV
+                                </button>
                                 <button 
                                     class="btn btn-danger" 
                                     onclick="deleteUser(${user.id})"
@@ -869,11 +1025,378 @@
             }
         }
         
-        // Initial load
-        loadUsers();
+        // ========== WEB USERS ==========
+        
+        // Load web users
+        async function loadWebUsers() {
+            try {
+                const response = await fetch('/api/admin/web-users');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('webUsersTableBody');
+                
+                if (!data.success || data.users.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🌐</div>
+                                    <div>Web пользователей пока нет</div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = data.users.map(user => {
+                        const statusBadge = user.is_active 
+                            ? '<span class="badge badge-success">Активен</span>'
+                            : '<span class="badge badge-danger">Неактивен</span>';
+                        const verifiedBadge = user.is_verified
+                            ? '<span class="badge badge-success">✓ Подтвержден</span>'
+                            : '<span class="badge badge-secondary">Не подтвержден</span>';
+                        
+                        return `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td><strong>${user.email}</strong></td>
+                                <td>${user.username || '—'}</td>
+                                <td>${statusBadge}</td>
+                                <td>${verifiedBadge}</td>
+                                <td>${new Date(user.created_at).toLocaleString('ru-RU')}</td>
+                                <td>
+                                    <button 
+                                        class="btn ${user.is_active ? 'btn-danger' : 'btn-primary'}" 
+                                        onclick="toggleWebUserActive(${user.id}, ${user.is_active})"
+                                        style="padding: 6px 12px; font-size: 13px; margin-right: 4px;"
+                                    >
+                                        ${user.is_active ? '⛔ Деактив.' : '✅ Актив.'}
+                                    </button>
+                                    <button 
+                                        class="btn btn-primary" 
+                                        onclick="viewWebUserSessions(${user.id}, '${user.email.replace(/'/g, "\\'")}')"
+                                        style="padding: 6px 12px; font-size: 13px; margin-right: 4px;"
+                                    >
+                                        💬 Диалоги
+                                    </button>
+                                    <button 
+                                        class="btn btn-secondary" 
+                                        onclick="exportWebUser(${user.id})"
+                                        style="padding: 6px 12px; font-size: 13px;"
+                                    >
+                                        📥 CSV
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                showAlert('Ошибка загрузки web пользователей: ' + error.message, 'error');
+            }
+        }
+        
+        // Toggle web user active status
+        async function toggleWebUserActive(userId, currentStatus) {
+            const action = currentStatus ? 'деактивировать' : 'активировать';
+            if (!confirm(`Вы уверены, что хотите ${action} этого пользователя?`)) return;
+            
+            try {
+                const response = await fetch(`/api/admin/web-users/${userId}/toggle-active`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadWebUsers();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка: ' + error.message, 'error');
+            }
+        }
+        
+        // View web user sessions
+        async function viewWebUserSessions(userId, userEmail) {
+            try {
+                const response = await fetch(`/api/admin/web-users/${userId}/sessions`);
+                const data = await response.json();
+                
+                if (!data.success || data.sessions.length === 0) {
+                    showAlert('У этого пользователя пока нет диалогов', 'error');
+                    return;
+                }
+                
+                // Показываем модаль с сессиями
+                showWebUserSessionsModal(userId, userEmail, data.sessions);
+            } catch (error) {
+                showAlert('Ошибка: ' + error.message, 'error');
+            }
+        }
+        
+        // Show web user sessions modal
+        function showWebUserSessionsModal(userId, userEmail, sessions) {
+            document.getElementById('chatModalTitle').textContent = `💬 Диалоги: ${userEmail}`;
+            document.getElementById('chatModalSubtitle').textContent = `Всего диалогов: ${sessions.length}`;
+            
+            const container = document.getElementById('chatMessagesContainer');
+            container.innerHTML = sessions.map(session => {
+                const date = new Date(session.updated_at || session.created_at).toLocaleString('ru-RU');
+                return `
+                    <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">${session.title || 'Диалог'}</div>
+                                <div style="font-size: 12px; color: #6f6f6f;">${date}</div>
+                            </div>
+                            <button 
+                                class="btn btn-primary" 
+                                onclick="loadWebSessionMessages(${userId}, ${session.id}, '${(session.title || 'Диалог').replace(/'/g, "\\'")}')"
+                                style="padding: 6px 12px; font-size: 13px;"
+                            >
+                                👁 Просмотр
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('chatMessagesModal').style.display = 'flex';
+        }
+        
+        // Load web session messages
+        async function loadWebSessionMessages(userId, sessionId, title) {
+            try {
+                const response = await fetch(`/api/admin/web-users/${userId}/sessions/${sessionId}/messages`);
+                const data = await response.json();
+                
+                document.getElementById('chatModalTitle').textContent = `💬 ${title}`;
+                document.getElementById('chatModalSubtitle').textContent = '';
+                
+                const container = document.getElementById('chatMessagesContainer');
+                
+                if (!data.success || data.messages.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #6f6f6f; padding: 40px;">Сообщений нет</div>';
+                } else {
+                    container.innerHTML = data.messages.map(msg => {
+                        const isUser = msg.role === 'user';
+                        const bgColor = isUser ? '#bfab8a' : '#ffffff';
+                        const textColor = isUser ? '#ffffff' : '#2d2d2d';
+                        const align = isUser ? 'flex-end' : 'flex-start';
+                        const time = new Date(msg.created_at).toLocaleString('ru-RU');
+                        
+                        return `
+                            <div style="display: flex; justify-content: ${align}; margin-bottom: 12px;">
+                                <div style="max-width: 80%; background: ${bgColor}; color: ${textColor}; padding: 12px 16px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px;">${isUser ? '👤 Пользователь' : '🤖 Бот'} • ${time}</div>
+                                    <div style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(msg.content)}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                showAlert('Ошибка загрузки сообщений: ' + error.message, 'error');
+            }
+        }
+        
+        // View telegram user sessions
+        async function viewTelegramUserSessions(userId, username) {
+            try {
+                const response = await fetch(`/api/admin/telegram-users/${userId}/sessions`);
+                const data = await response.json();
+                
+                if (!data.success || data.sessions.length === 0) {
+                    showAlert('У этого пользователя пока нет диалогов', 'error');
+                    return;
+                }
+                
+                // Показываем модаль с сессиями
+                showTelegramUserSessionsModal(userId, username, data.sessions);
+            } catch (error) {
+                showAlert('Ошибка: ' + error.message, 'error');
+            }
+        }
+        
+        // Show telegram user sessions modal
+        function showTelegramUserSessionsModal(userId, username, sessions) {
+            document.getElementById('chatModalTitle').textContent = `💬 Диалоги: ${username}`;
+            document.getElementById('chatModalSubtitle').textContent = `Всего диалогов: ${sessions.length}`;
+            
+            const container = document.getElementById('chatMessagesContainer');
+            container.innerHTML = sessions.map(session => {
+                const date = new Date(session.updated_at || session.created_at).toLocaleString('ru-RU');
+                return `
+                    <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">${session.title || 'Диалог'}</div>
+                                <div style="font-size: 12px; color: #6f6f6f;">${date} • Сообщений: ${session.message_count || 0}</div>
+                            </div>
+                            <button 
+                                class="btn btn-primary" 
+                                onclick="loadTelegramSessionMessages(${session.id}, '${(session.title || 'Диалог').replace(/'/g, "\\'")}')"
+                                style="padding: 6px 12px; font-size: 13px;"
+                            >
+                                👁 Просмотр
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('chatMessagesModal').style.display = 'flex';
+        }
+        
+        // Load telegram session messages
+        async function loadTelegramSessionMessages(sessionId, title) {
+            try {
+                const response = await fetch(`/api/admin/telegram-sessions/${sessionId}/messages`);
+                const data = await response.json();
+                
+                document.getElementById('chatModalTitle').textContent = `💬 ${title}`;
+                document.getElementById('chatModalSubtitle').textContent = '';
+                
+                const container = document.getElementById('chatMessagesContainer');
+                
+                if (!data.success || data.messages.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #6f6f6f; padding: 40px;">Сообщений нет</div>';
+                } else {
+                    container.innerHTML = data.messages.map(msg => {
+                        const isUser = msg.role === 'user';
+                        const bgColor = isUser ? '#bfab8a' : '#ffffff';
+                        const textColor = isUser ? '#ffffff' : '#2d2d2d';
+                        const align = isUser ? 'flex-end' : 'flex-start';
+                        const time = new Date(msg.created_at).toLocaleString('ru-RU');
+                        
+                        return `
+                            <div style="display: flex; justify-content: ${align}; margin-bottom: 12px;">
+                                <div style="max-width: 80%; background: ${bgColor}; color: ${textColor}; padding: 12px 16px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px;">${isUser ? '👤 Пользователь' : '🤖 Бот'} • ${time}</div>
+                                    <div style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(msg.content)}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // Прокручиваем вниз
+                    container.scrollTop = container.scrollHeight;
+                }
+                
+                // Показываем модаль
+                document.getElementById('chatMessagesModal').style.display = 'flex';
+            } catch (error) {
+                showAlert('Ошибка загрузки сообщений: ' + error.message, 'error');
+            }
+        }
+        
+        // Close chat modal
+        function closeChatModal() {
+            document.getElementById('chatMessagesModal').style.display = 'none';
+        }
+        
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Close modal on outside click
+        document.getElementById('chatMessagesModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeChatModal();
+            }
+        });
+        
+        // ========== EXPORT ==========
+        
+        // Export Telegram user chats to CSV
+        function exportTelegramUser(userId) {
+            window.location.href = `/api/admin/telegram-users/${userId}/export`;
+        }
+        
+        // Export Web user chats to CSV
+        function exportWebUser(userId) {
+            window.location.href = `/api/admin/web-users/${userId}/export`;
+        }
+        
+        // ========== AUTH ==========
+        
+        // Check auth on page load
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/admin/check-auth');
+                const data = await response.json();
+                
+                if (data.authorized) {
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    loadUsers();  // Load initial data
+                } else {
+                    document.getElementById('loginOverlay').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('loginOverlay').classList.remove('hidden');
+            }
+        }
+        
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    errorDiv.classList.remove('show');
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    loadUsers();  // Load initial data
+                } else {
+                    errorDiv.textContent = data.error || 'Ошибка входа';
+                    errorDiv.classList.add('show');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Ошибка соединения';
+                errorDiv.classList.add('show');
+            }
+        });
+        
+        // Logout
+        async function adminLogout() {
+            try {
+                await fetch('/api/admin/logout', {method: 'POST'});
+                document.getElementById('loginOverlay').classList.remove('hidden');
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+        
+        // Handle 401 errors globally
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const response = await originalFetch(...args);
+            if (response.status === 401 && args[0].includes('/api/admin/') && !args[0].includes('/login')) {
+                document.getElementById('loginOverlay').classList.remove('hidden');
+            }
+            return response;
+        };
+        
+        // Initial auth check
+        checkAuth();
     </script>
-    
-    <!-- Web Users Management -->
-    <script src="{{ url_for('static', filename='admin-web-users.js') }}"></script>
 </body>
 </html>

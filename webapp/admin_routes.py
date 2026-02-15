@@ -1,8 +1,14 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session, Response
 import database as db
+import csv
+import io
+from datetime import datetime
 import re
 import requests
 import os
+import secrets
+import hashlib
+from functools import wraps
 from telegram_notify import notify_access_approved, notify_access_rejected
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
@@ -11,6 +17,47 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 QDRANT_URL = os.getenv('QDRANT_URL', 'http://qdrant:6333')
 COLLECTION_NAME = "documents"
 
+# Admin credentials (can be overridden via environment variables)
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin_vector')
+ADMIN_PASSWORD_HASH = hashlib.sha256(os.getenv('ADMIN_PASSWORD', '88990GDG').encode()).hexdigest()
+
+def admin_required(f):
+    """Декоратор для защиты админ-эндпоинтов"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Проверяем сессию
+        if not session.get('admin_logged_in'):
+            return jsonify({'error': 'Требуется авторизация администратора', 'require_login': True}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+@admin_bp.route('/login', methods=['POST'])
+def admin_login():
+    """Авторизация администратора"""
+    data = request.get_json()
+    username = data.get('username', '')
+    password = data.get('password', '')
+    
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    if username == ADMIN_USERNAME and password_hash == ADMIN_PASSWORD_HASH:
+        session['admin_logged_in'] = True
+        session.permanent = True  # Сессия сохраняется 
+        return jsonify({'success': True, 'message': 'Вход выполнен'})
+    else:
+        return jsonify({'error': 'Неверный логин или пароль'}), 401
+
+@admin_bp.route('/logout', methods=['POST'])
+def admin_logout():
+    """Выход администратора"""
+    session.pop('admin_logged_in', None)
+    return jsonify({'success': True, 'message': 'Выход выполнен'})
+
+@admin_bp.route('/check-auth', methods=['GET'])
+def check_admin_auth():
+    """Проверка авторизации админа"""
+    return jsonify({'authorized': session.get('admin_logged_in', False)})
+
 def validate_phone_number(phone):
     """Валидация номера телефона (международный формат)"""
     # Простая валидация: начинается с + и содержит 10-15 цифр
@@ -18,6 +65,7 @@ def validate_phone_number(phone):
     return re.match(pattern, phone) is not None
 
 @admin_bp.route('/users', methods=['GET'])
+@admin_required
 def get_users():
     """Получить список всех пользователей"""
     try:
@@ -37,6 +85,7 @@ def get_users():
         }), 500
 
 @admin_bp.route('/users', methods=['POST'])
+@admin_required
 def add_user():
     """Добавить нового пользователя по номеру телефона"""
     try:
@@ -82,6 +131,7 @@ def add_user():
         }), 500
 
 @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@admin_required
 def delete_user(user_id):
     """Удалить пользователя"""
     try:
@@ -113,6 +163,7 @@ def delete_user(user_id):
         }), 500
 
 @admin_bp.route('/stats', methods=['GET'])
+@admin_required
 def get_stats():
     """Получить статистику системы"""
     try:
@@ -133,6 +184,7 @@ def get_stats():
         }), 500
 
 @admin_bp.route('/logs', methods=['GET'])
+@admin_required
 def get_logs():
     """Получить логи запросов"""
     try:
@@ -154,6 +206,7 @@ def get_logs():
         }), 500
 
 @admin_bp.route('/access-requests', methods=['GET'])
+@admin_required
 def get_access_requests():
     """Получить список запросов на доступ"""
     try:
@@ -204,6 +257,7 @@ def create_access_request():
         }), 500
 
 @admin_bp.route('/web-users', methods=['GET'])
+@admin_required
 def get_web_users():
     """Получить список web-пользователей"""
     try:
@@ -223,6 +277,7 @@ def get_web_users():
         }), 500
 
 @admin_bp.route('/web-users/<int:user_id>/sessions', methods=['GET'])
+@admin_required
 def get_web_user_sessions(user_id):
     """Получить сессии чатов web-пользователя"""
     try:
@@ -239,6 +294,7 @@ def get_web_user_sessions(user_id):
         }), 500
 
 @admin_bp.route('/web-users/<int:user_id>/sessions/<int:session_id>/messages', methods=['GET'])
+@admin_required
 def get_web_user_session_messages(user_id, session_id):
     """Получить сообщения конкретной сессии"""
     try:
@@ -254,6 +310,7 @@ def get_web_user_session_messages(user_id, session_id):
         }), 500
 
 @admin_bp.route('/web-users/<int:user_id>/toggle-active', methods=['POST'])
+@admin_required
 def toggle_web_user_active(user_id):
     """Активировать/деактивировать web-пользователя"""
     try:
@@ -297,6 +354,7 @@ def toggle_web_user_active(user_id):
         }), 500
 
 @admin_bp.route('/documents', methods=['GET'])
+@admin_required
 def get_documents():
     """Получить список документов из Qdrant"""
     try:
@@ -377,6 +435,7 @@ def get_documents():
         }), 500
 
 @admin_bp.route('/access-requests/<int:request_id>/approve', methods=['POST'])
+@admin_required
 def approve_request(request_id):
     """Одобрить запрос на доступ"""
     try:
@@ -414,6 +473,7 @@ def approve_request(request_id):
         }), 500
 
 @admin_bp.route('/access-requests/<int:request_id>/reject', methods=['POST'])
+@admin_required
 def reject_request(request_id):
     """Отклонить запрос на доступ"""
     try:
@@ -441,6 +501,198 @@ def reject_request(request_id):
             'success': False,
             'error': str(e)
         }), 500
+
+# ===================== Telegram Chat Endpoints =====================
+
+@admin_bp.route('/telegram-users', methods=['GET'])
+@admin_required
+def get_telegram_users_with_stats():
+    """Получить список telegram пользователей со статистикой чатов"""
+    try:
+        users = db.get_telegram_users_with_chat_stats()
+        return jsonify({
+            'success': True,
+            'users': users,
+            'count': len(users)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/telegram-sessions', methods=['GET'])
+@admin_required
+def get_telegram_sessions():
+    """Получить все telegram сессии с информацией о пользователях"""
+    try:
+        limit = int(request.args.get('limit', 100))
+        sessions = db.get_all_telegram_sessions_with_users(limit=limit)
+        return jsonify({
+            'success': True,
+            'sessions': sessions,
+            'count': len(sessions)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/telegram-users/<int:user_id>/sessions', methods=['GET'])
+@admin_required
+def get_telegram_user_sessions(user_id):
+    """Получить сессии конкретного telegram пользователя"""
+    try:
+        sessions = db.get_telegram_user_sessions(user_id, limit=100)
+        return jsonify({
+            'success': True,
+            'sessions': sessions,
+            'count': len(sessions)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/telegram-sessions/<int:session_id>/messages', methods=['GET'])
+@admin_required
+def get_telegram_session_messages(session_id):
+    """Получить сообщения конкретной telegram сессии"""
+    try:
+        messages = db.get_chat_messages(session_id, limit=200)
+        return jsonify({
+            'success': True,
+            'messages': messages
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ===================== Export Endpoints =====================
+
+@admin_bp.route('/telegram-users/<int:user_id>/export', methods=['GET'])
+@admin_required
+def export_telegram_user_chats(user_id):
+    """Экспорт всех диалогов Telegram пользователя в CSV"""
+    try:
+        # Получаем информацию о пользователе
+        user = db.get_user_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'Пользователь не найден'}), 404
+        
+        # Получаем все сессии пользователя
+        sessions = db.get_telegram_user_sessions(user_id, limit=1000)
+        
+        # Создаем CSV в памяти
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_ALL)
+        
+        # Заголовок
+        writer.writerow(['Дата', 'Время', 'Сессия', 'Роль', 'Сообщение'])
+        
+        # Собираем все сообщения из всех сессий
+        for session in sessions:
+            session_title = session.get('title', 'Диалог')
+            messages = db.get_chat_messages(session['id'], limit=1000)
+            
+            for msg in messages:
+                created_at = msg.get('created_at', '')
+                if created_at:
+                    try:
+                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        date_str = dt.strftime('%Y-%m-%d')
+                        time_str = dt.strftime('%H:%M:%S')
+                    except:
+                        date_str = created_at[:10] if len(created_at) >= 10 else ''
+                        time_str = created_at[11:19] if len(created_at) >= 19 else ''
+                else:
+                    date_str = ''
+                    time_str = ''
+                
+                role = 'Пользователь' if msg.get('role') == 'user' else 'Бот'
+                content = msg.get('content', '').replace('\n', ' ').replace('\r', '')
+                
+                writer.writerow([date_str, time_str, session_title, role, content])
+        
+        # Подготавливаем ответ
+        output.seek(0)
+        username = user.get('username') or user.get('phone_number') or f'user_{user_id}'
+        filename = f'telegram_{username}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv; charset=utf-8',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'text/csv; charset=utf-8'
+            }
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/web-users/<int:user_id>/export', methods=['GET'])
+@admin_required
+def export_web_user_chats(user_id):
+    """Экспорт всех диалогов Web пользователя в CSV"""
+    try:
+        # Получаем информацию о пользователе
+        user = db.get_web_user_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'Пользователь не найден'}), 404
+        
+        # Получаем все сессии пользователя
+        sessions = db.get_user_chat_sessions(user_id, 'web', limit=1000)
+        
+        # Создаем CSV в памяти
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_ALL)
+        
+        # Заголовок
+        writer.writerow(['Дата', 'Время', 'Сессия', 'Роль', 'Сообщение'])
+        
+        # Собираем все сообщения из всех сессий
+        for session in sessions:
+            session_title = session.get('title', 'Диалог')
+            messages = db.get_chat_messages(session['id'], limit=1000)
+            
+            for msg in messages:
+                created_at = msg.get('created_at', '')
+                if created_at:
+                    try:
+                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        date_str = dt.strftime('%Y-%m-%d')
+                        time_str = dt.strftime('%H:%M:%S')
+                    except:
+                        date_str = created_at[:10] if len(created_at) >= 10 else ''
+                        time_str = created_at[11:19] if len(created_at) >= 19 else ''
+                else:
+                    date_str = ''
+                    time_str = ''
+                
+                role = 'Пользователь' if msg.get('role') == 'user' else 'Бот'
+                content = msg.get('content', '').replace('\n', ' ').replace('\r', '')
+                
+                writer.writerow([date_str, time_str, session_title, role, content])
+        
+        # Подготавливаем ответ
+        output.seek(0)
+        username = user.get('email') or user.get('username') or f'user_{user_id}'
+        filename = f'web_{username}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv; charset=utf-8',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'text/csv; charset=utf-8'
+            }
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/health', methods=['GET'])
 def health_check():

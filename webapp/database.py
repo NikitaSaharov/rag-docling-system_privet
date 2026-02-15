@@ -592,6 +592,105 @@ def get_chat_messages(session_id, limit=100):
     conn.close()
     return [dict(message) for message in messages]
 
+# ===================== Telegram Chat Functions =====================
+
+def get_or_create_telegram_session(user_id):
+    """
+    Получает активную сессию для telegram пользователя или создает новую.
+    Сессия считается активной, если обновлялась в последние 24 часа.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Ищем сессию, обновленную за последние 24 часа
+    cursor.execute('''
+        SELECT * FROM chat_sessions 
+        WHERE user_id = ? AND user_type = 'telegram'
+        AND updated_at > datetime('now', '-24 hours')
+        ORDER BY updated_at DESC
+        LIMIT 1
+    ''', (user_id,))
+    session = cursor.fetchone()
+    
+    if session:
+        conn.close()
+        return dict(session)
+    
+    # Создаем новую сессию
+    title = f"Диалог {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+    cursor.execute('''
+        INSERT INTO chat_sessions (user_id, user_type, title)
+        VALUES (?, 'telegram', ?)
+    ''', (user_id, title))
+    conn.commit()
+    session_id = cursor.lastrowid
+    
+    # Получаем созданную сессию
+    cursor.execute('SELECT * FROM chat_sessions WHERE id = ?', (session_id,))
+    session = cursor.fetchone()
+    conn.close()
+    
+    return dict(session) if session else None
+
+def get_telegram_user_sessions(user_id, limit=50):
+    """Получает все сессии telegram пользователя"""
+    return get_user_chat_sessions(user_id, 'telegram', limit)
+
+def get_all_telegram_sessions_with_users(limit=100):
+    """
+    Получает все telegram сессии с информацией о пользователях для админ-панели
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            cs.id as session_id,
+            cs.user_id,
+            cs.title,
+            cs.created_at,
+            cs.updated_at,
+            u.username,
+            u.phone_number,
+            u.telegram_id,
+            (SELECT COUNT(*) FROM chat_messages WHERE session_id = cs.id) as message_count
+        FROM chat_sessions cs
+        JOIN users u ON cs.user_id = u.id
+        WHERE cs.user_type = 'telegram'
+        ORDER BY cs.updated_at DESC
+        LIMIT ?
+    ''', (limit,))
+    sessions = cursor.fetchall()
+    conn.close()
+    return [dict(s) for s in sessions]
+
+def get_telegram_users_with_chat_stats():
+    """
+    Получает список telegram пользователей со статистикой чатов
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            u.id,
+            u.phone_number,
+            u.telegram_id,
+            u.username,
+            u.is_active,
+            u.created_at,
+            (SELECT COUNT(*) FROM chat_sessions WHERE user_id = u.id AND user_type = 'telegram') as session_count,
+            (SELECT COUNT(*) FROM chat_messages cm 
+             JOIN chat_sessions cs ON cm.session_id = cs.id 
+             WHERE cs.user_id = u.id AND cs.user_type = 'telegram') as message_count,
+            (SELECT MAX(cs.updated_at) FROM chat_sessions cs 
+             WHERE cs.user_id = u.id AND cs.user_type = 'telegram') as last_activity
+        FROM users u
+        WHERE u.is_active = 1
+        ORDER BY last_activity DESC NULLS LAST
+    ''')
+    users = cursor.fetchall()
+    conn.close()
+    return [dict(u) for u in users]
+
 # ===================== Access Requests Functions =====================
 
 def create_access_request(phone_number, telegram_id, username=None):

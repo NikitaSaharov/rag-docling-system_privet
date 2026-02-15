@@ -18,6 +18,10 @@ from examples_loader import load_examples, format_examples_for_prompt
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
+# Session configuration
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)  # Admin session lasts 3 hours
+
 # Регистрируем Blueprint
 app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
@@ -833,11 +837,19 @@ def telegram_search():
     # Генерируем ответ
     answer = ask_llm(query_with_context, context)
     
-    # Логируем запрос
+    # Сохраняем в историю чата (сессии + сообщения)
     try:
+        # Получаем или создаем сессию
+        session = db.get_or_create_telegram_session(user['id'])
+        if session:
+            # Сохраняем вопрос и ответ
+            db.add_chat_message(session['id'], 'user', query)
+            db.add_chat_message(session['id'], 'assistant', answer)
+        
+        # Также логируем в query_logs для обратной совместимости
         db.log_query(user['id'], query, answer)
     except Exception as e:
-        print(f"Ошибка логирования запроса: {e}")
+        print(f"Ошибка сохранения чата: {e}")
     
     return jsonify({
         'answer': answer,
