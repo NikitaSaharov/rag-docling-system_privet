@@ -150,6 +150,15 @@ def add_user(phone_number, telegram_id=None, username=None):
         print(f"Ошибка добавления пользователя: {e}")
         return None
 
+def get_user_by_id(user_id):
+    """Получает пользователя (telegram) по ID"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
 def get_user_by_phone(phone_number):
     """Получает пользователя по номеру телефона"""
     conn = get_connection()
@@ -237,13 +246,23 @@ def deactivate_user(user_id):
     return success
 
 def delete_user(user_id):
-    """Полностью удаляет пользователя из БД"""
+    """Полностью удаляет пользователя (telegram) из БД вместе с логами, сессиями и сообщениями"""
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Сначала удаляем логи
+    # Удаляем сообщения из сессий пользователя
+    cursor.execute('''
+        DELETE FROM chat_messages WHERE session_id IN (
+            SELECT id FROM chat_sessions WHERE user_id = ? AND user_type = 'telegram'
+        )
+    ''', (user_id,))
+    # Удаляем сессии
+    cursor.execute("DELETE FROM chat_sessions WHERE user_id = ? AND user_type = 'telegram'", (user_id,))
+    # Удаляем логи
     cursor.execute('DELETE FROM query_logs WHERE user_id = ?', (user_id,))
-    # Затем пользователя
+    # Удаляем запросы на доступ
+    cursor.execute('DELETE FROM access_requests WHERE telegram_id = (SELECT telegram_id FROM users WHERE id = ?)', (user_id,))
+    # Удаляем пользователя
     cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
     
     conn.commit()
@@ -446,6 +465,27 @@ def verify_two_fa_code(user_id, code):
     
     conn.close()
     return user is not None
+
+def delete_web_user(user_id):
+    """Полностью удаляет web-пользователя из БД вместе с сессиями и сообщениями"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Удаляем сообщения из сессий пользователя
+    cursor.execute('''
+        DELETE FROM chat_messages WHERE session_id IN (
+            SELECT id FROM chat_sessions WHERE user_id = ? AND user_type = 'web'
+        )
+    ''', (user_id,))
+    # Удаляем сессии
+    cursor.execute("DELETE FROM chat_sessions WHERE user_id = ? AND user_type = 'web'", (user_id,))
+    # Удаляем пользователя
+    cursor.execute('DELETE FROM web_users WHERE id = ?', (user_id,))
+    
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
 
 def list_web_users(limit=100, offset=0):
     """Получает список web-пользователей"""

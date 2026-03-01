@@ -787,14 +787,14 @@
             }
         }
         
-        // Delete user
+        // Delete user (full deletion from DB)
         async function deleteUser(userId) {
-            if (!confirm('Вы уверены, что хотите деактивировать этого пользователя?')) {
+            if (!confirm('Вы уверены, что хотите ПОЛНОСТЬЮ удалить этого пользователя?\n\nБудут удалены:\n- Аккаунт\n- Все диалоги и сообщения\n- Логи запросов\n\nЭто действие необратимо!')) {
                 return;
             }
             
             try {
-                const response = await fetch(`/api/admin/users/${userId}`, {
+                const response = await fetch(`/api/admin/users/${userId}?action=delete`, {
                     method: 'DELETE'
                 });
                 
@@ -1081,9 +1081,16 @@
                                     <button 
                                         class="btn btn-secondary" 
                                         onclick="exportWebUser(${user.id})"
-                                        style="padding: 6px 12px; font-size: 13px;"
+                                        style="padding: 6px 12px; font-size: 13px; margin-right: 4px;"
                                     >
                                         📥 CSV
+                                    </button>
+                                    <button 
+                                        class="btn btn-danger" 
+                                        onclick="deleteWebUser(${user.id})"
+                                        style="padding: 6px 12px; font-size: 13px;"
+                                    >
+                                        🗑️ Удалить
                                     </button>
                                 </td>
                             </tr>
@@ -1322,6 +1329,30 @@
         // Export Web user chats to CSV
         function exportWebUser(userId) {
             window.location.href = `/api/admin/web-users/${userId}/export`;
+        }
+        
+        // Delete web user (full deletion from DB)
+        async function deleteWebUser(userId) {
+            if (!confirm('Вы уверены, что хотите ПОЛНОСТЬЮ удалить этого web-пользователя?\n\nБудут удалены:\n- Аккаунт\n- Все диалоги и сообщения\n\nЭто действие необратимо!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/web-users/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadWebUsers();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка: ' + error.message, 'error');
+            }
         }
         
         // ========== AUTH ==========

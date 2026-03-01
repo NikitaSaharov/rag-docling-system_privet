@@ -276,6 +276,28 @@ def get_web_users():
             'error': str(e)
         }), 500
 
+@admin_bp.route('/web-users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_web_user(user_id):
+    """Удалить web-пользователя"""
+    try:
+        success = db.delete_web_user(user_id)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Web-пользователь удален'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Пользователь не найден'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @admin_bp.route('/web-users/<int:user_id>/sessions', methods=['GET'])
 @admin_required
 def get_web_user_sessions(user_id):
