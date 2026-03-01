@@ -1177,15 +1177,40 @@
             const loadingId = addLoadingMessage();
             
             try {
+                // Получаем токен авторизации
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    document.getElementById(loadingId).remove();
+                    addMessage('assistant', 'Для отправки запросов необходимо войти в аккаунт.');
+                    showModal('loginModal');
+                    isLoading = false;
+                    document.getElementById('sendBtn').disabled = false;
+                    return;
+                }
+                
                 // Отправляем запрос с историей чата
                 const response = await fetch('/api/search', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         query: query,
                         history: chatHistory.slice(-3) // Последние 3 пары
                     })
                 });
+                
+                // Если не авторизован — показываем логин
+                if (response.status === 401) {
+                    document.getElementById(loadingId).remove();
+                    addMessage('assistant', 'Сессия истекла. Пожалуйста, войдите в аккаунт снова.');
+                    localStorage.removeItem('auth_token');
+                    showModal('loginModal');
+                    isLoading = false;
+                    document.getElementById('sendBtn').disabled = false;
+                    return;
+                }
                 
                 const data = await response.json();
                 
