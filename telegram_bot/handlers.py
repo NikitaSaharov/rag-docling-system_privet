@@ -1,5 +1,7 @@
 import logging
 import aiohttp
+import os
+import io
 import re
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -237,6 +239,162 @@ def register_handlers(dp, flask_api_url):
                 "Попробуйте позже или обратитесь к администратору.",
                 reply_markup=ReplyKeyboardRemove()
             )
+    
+    @router.message(F.voice)
+    async def handle_voice_message(message: Message):
+        """Обработчик голосовых сообщений — STT + поиск"""
+        user_id = message.from_user.id
+        
+        logger.info(f"Голосовое сообщение от пользователя {user_id}, длительность: {message.voice.duration}с")
+        
+        # Проверяем авторизацию до транскрипции (экономим API вызовы)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{flask_api_url}/api/telegram/check_auth",
+                    json={'telegram_id': user_id},
+                    timeout=aiohttp.ClientTimeout(total=3)
+                ) as response:
+                    result = await response.json()
+                    if not result.get('authorized'):
+                        await message.answer(
+                            "🔐 Для использования голосового ввода необходима авторизация.\n\n"
+                            "Нажмите /start для авторизации."
+                        )
+                        return
+        except Exception as e:
+            logger.error(f"Ошибка проверки авторизации: {e}")
+            await message.answer("❌ Ошибка подключения к серверу.")
+            return
+        
+        processing_msg = await message.answer("🎤 Распознаю речь...")
+        
+        try:
+            # Скачиваем голосовое в память
+            bot = message.bot
+            file = await bot.get_file(message.voice.file_id)
+            file_bytes = io.BytesIO()
+            await bot.download_file(file.file_path, file_bytes)
+            file_bytes.seek(0)
+            
+            # Отправляем на Polza.ai для транскрипции
+            stt_api_key = os.getenv('POLZA_STT_API_KEY', '')
+            if not stt_api_key:
+                await processing_msg.edit_text("❌ STT API ключ не настроен.")
+                return
+            
+            form_data = aiohttp.FormData()
+            form_data.add_field('file', file_bytes, filename='voice.ogg', content_type='audio/ogg')
+            form_data.add_field('model', 'openai/gpt-4o-mini-transcribe')
+            form_data.add_field('language', 'ru')
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    'https://api.polza.ai/v1/audio/transcriptions',
+                    headers={'Authorization': f'Bearer {stt_api_key}'},
+                    data=form_data,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as stt_response:
+                    if stt_response.status != 200:
+                        error_text = await stt_response.text()
+                        logger.error(f"STT API error: {stt_response.status} {error_text}")
+                        await processing_msg.edit_text("❌ Ошибка распознавания речи.")
+                        return
+                    
+                    stt_result = await stt_response.json()
+                    text = stt_result.get('text', '').strip()
+            
+            if not text:
+                await processing_msg.edit_text("❌ Речь не распознана. Попробуйте ещё раз.")
+                return
+            
+            logger.info(f"Распознано от {user_id}: {text[:80]}")
+            await processing_msg.edit_text(f"🔍 Распознано: «{text}»\n\nИщу ответ...")
+            
+            # Отправляем распознанный текст как поисковый запрос
+            history = chat_history.get(user_id, [])
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{flask_api_url}/api/telegram/search",
+                    json={'telegram_id': user_id, 'query': text, 'history': history},
+                    timeout=aiohttp.ClientTimeout(total=60)
+                ) as response:
+                    result = await response.json()
+                    
+                    await processing_msg.delete()
+                    
+                    if response.status == 403 or not result.get('authorized'):
+                        await message.answer("🚫 Доступ запрещен.")
+                        return
+                    
+                    if response.status != 200:
+                        error_msg = result.get('error', 'Неизвестная ошибка')
+                        await message.answer(f"❌ Ошибка: {error_msg}")
+                        return
+                    
+                    answer = result.get('answer', 'Ответ не получен')
+                    sources = result.get('sources', [])
+                    
+                    # Парсим suggestions
+                    suggestions, _ = parse_suggestions(answer)
+                    
+                    # Сохраняем в историю
+                    chat_history.setdefault(user_id, []).append({
+                        'question': text,
+                        'answer': answer
+                    })
+                    if len(chat_history[user_id]) > 5:
+                        chat_history[user_id] = chat_history[user_id][-5:]
+                    
+                    # Кэшируем sources и suggestions
+                    message_id = message.message_id + 1
+                    sources_cache[f"{user_id}_{message_id}"] = sources
+                    if suggestions:
+                        suggestions_cache[user_id] = suggestions
+                    
+                    # Собираем inline-клавиатуру
+                    inline_buttons = []
+                    if sources:
+                        inline_buttons.append([
+                            InlineKeyboardButton(
+                                text="📄 Показать источники",
+                                callback_data=f"show_sources:{message_id}"
+                            )
+                        ])
+                    if suggestions:
+                        suggestion_row = []
+                        for idx in range(min(len(suggestions), 3)):
+                            suggestion_row.append(
+                                InlineKeyboardButton(
+                                    text=f"{idx + 1}",
+                                    callback_data=f"suggestion:{idx}"
+                                )
+                            )
+                        inline_buttons.append(suggestion_row)
+                    
+                    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_buttons) if inline_buttons else None
+                    
+                    # Показываем распознанный текст + ответ
+                    await message.answer(f"🎤 «{text}»")
+                    await message.answer(answer, reply_markup=keyboard)
+                    
+                    logger.info(f"Голосовой ответ отправлен пользователю {user_id}")
+        
+        except aiohttp.ClientError as e:
+            logger.error(f"Ошибка подключения: {e}")
+            try:
+                await processing_msg.delete()
+            except:
+                pass
+            await message.answer("❌ Ошибка подключения к серверу.")
+        except Exception as e:
+            logger.error(f"Ошибка обработки голосового: {e}", exc_info=True)
+            try:
+                await processing_msg.delete()
+            except:
+                pass
+            await message.answer("❌ Ошибка при обработке голосового сообщения.")
     
     @router.message(F.text)
     async def handle_text_message(message: Message):

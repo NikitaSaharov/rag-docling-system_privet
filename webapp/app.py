@@ -39,6 +39,11 @@ POLZA_API_KEY = os.getenv('POLZA_API_KEY', '')
 POLZA_URL = "https://api.polza.ai/v1/chat/completions"
 DEEPSEEK_MODEL = "deepseek-chat"
 
+# Speech-to-Text (Polza.ai)
+POLZA_STT_API_KEY = os.getenv('POLZA_STT_API_KEY', '')
+POLZA_STT_URL = "https://api.polza.ai/v1/audio/transcriptions"
+POLZA_STT_MODEL = "openai/gpt-4o-mini-transcribe"
+
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'pptx', 'txt', 'md', 'doc'}
 
 def allowed_file(filename):
@@ -982,6 +987,53 @@ def search():
         'sources': sources,
         'session_id': session_id
     })
+
+@app.route('/api/transcribe', methods=['POST'])
+@jwt_required
+def transcribe_audio():
+    """Speech-to-Text: принимает аудио, возвращает текст"""
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Аудио файл не передан'}), 400
+    
+    audio_file = request.files['audio']
+    
+    if not POLZA_STT_API_KEY:
+        return jsonify({'error': 'STT API ключ не настроен'}), 500
+    
+    try:
+        # Отправляем напрямую в Polza API (без сохранения на диск)
+        response = requests.post(
+            POLZA_STT_URL,
+            headers={
+                'Authorization': f'Bearer {POLZA_STT_API_KEY}'
+            },
+            files={
+                'file': (audio_file.filename or 'audio.webm', audio_file.stream, audio_file.content_type or 'audio/webm')
+            },
+            data={
+                'model': POLZA_STT_MODEL,
+                'language': 'ru'
+            },
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            print(f"STT API error: {response.status_code} {response.text}")
+            return jsonify({'error': 'Ошибка распознавания речи'}), 500
+        
+        result = response.json()
+        text = result.get('text', '').strip()
+        
+        if not text:
+            return jsonify({'error': 'Речь не распознана'}), 400
+        
+        return jsonify({'text': text})
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Таймаут распознавания'}), 504
+    except Exception as e:
+        print(f"STT error: {e}")
+        return jsonify({'error': 'Ошибка распознавания речи'}), 500
 
 @app.route('/api/documents', methods=['GET'])
 def list_documents():

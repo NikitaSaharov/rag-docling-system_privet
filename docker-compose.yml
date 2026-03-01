@@ -130,10 +130,18 @@ services:
 
 volumes:
   n8n_data:
+    external:
+      name: docling_n8n_data
   ollama_data:
+    external:
+      name: docling_ollama_data
   qdrant_data:
+    external:
+      name: docling_qdrant_data
   open_webui_data:
-  db_data:  # Volume для SQLite базы
+    external:
+      name: docling_open_webui_data
+  db_data:
 
 networks:
   docling-network:

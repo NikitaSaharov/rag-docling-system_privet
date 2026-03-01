@@ -114,6 +114,8 @@
             flex: 1;
             overflow-y: auto;
             padding: 24px;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
         }
         
         .message {
@@ -292,7 +294,7 @@
         
         .input-field {
             width: 100%;
-            padding: 14px 52px 14px 16px;
+            padding: 14px 92px 14px 16px;
             border: 1px solid #d1d5db;
             border-radius: 12px;
             font-size: 15px;
@@ -332,6 +334,117 @@
         .send-button:disabled {
             background: #d1d5db;
             cursor: not-allowed;
+        }
+        
+        /* Mic Button */
+        .mic-button {
+            position: absolute;
+            right: 48px;
+            bottom: 8px;
+            width: 36px;
+            height: 36px;
+            background: transparent;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: #6b7280;
+        }
+        
+        .mic-button:hover {
+            border-color: var(--primary-gold);
+            color: var(--primary-gold);
+        }
+        
+        .mic-button.recording {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+        }
+        
+        .mic-button.processing {
+            background: #d1d5db;
+            border-color: #d1d5db;
+            color: white;
+            cursor: wait;
+        }
+        
+        /* Звуковые волны внутри поля ввода */
+        .input-waves {
+            display: none;
+            position: absolute;
+            left: 1px;
+            top: 1px;
+            bottom: 1px;
+            right: 85px;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            z-index: 2;
+            background: white;
+            border-radius: 11px 0 0 11px;
+        }
+        
+        .input-waves.active {
+            display: flex;
+        }
+        
+        .input-waves .wave-bar {
+            width: 4px;
+            min-height: 4px;
+            max-height: 32px;
+            background: #ef4444;
+            border-radius: 2px;
+            transition: height 0.08s ease;
+        }
+        
+        .input-waves .wave-label {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #ef4444;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        
+        .input-waves.processing .wave-bar {
+            background: var(--primary-gold);
+            animation: wave-process 0.8s ease-in-out infinite;
+        }
+        
+        .input-waves.processing .wave-bar:nth-child(1) { animation-delay: 0s; }
+        .input-waves.processing .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .input-waves.processing .wave-bar:nth-child(3) { animation-delay: 0.15s; }
+        .input-waves.processing .wave-bar:nth-child(4) { animation-delay: 0.2s; }
+        .input-waves.processing .wave-bar:nth-child(5) { animation-delay: 0.25s; }
+        .input-waves.processing .wave-bar:nth-child(6) { animation-delay: 0.3s; }
+        .input-waves.processing .wave-bar:nth-child(7) { animation-delay: 0.35s; }
+        .input-waves.processing .wave-bar:nth-child(8) { animation-delay: 0.2s; }
+        .input-waves.processing .wave-bar:nth-child(9) { animation-delay: 0.1s; }
+        
+        @keyframes wave-process {
+            0%, 100% { height: 6px; }
+            50% { height: 20px; }
+        }
+        
+        /* Пульсация фона кнопки */
+        .mic-button.recording::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 12px;
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            animation: mic-ring 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes mic-ring {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0; transform: scale(1.15); }
         }
         
         .spinner {
@@ -441,12 +554,7 @@
         
         .sidebar.mobile-hidden {
             transform: translateX(-100%);
-        }
-            transition: transform 0.3s;
-        }
-        
-        .sidebar.hidden {
-            transform: translateX(-100%);
+            pointer-events: none;
         }
         
         .sidebar-header {
@@ -891,6 +999,34 @@
             .empty-title {
                 font-size: 22px;
             }
+            
+            .input-field {
+                padding: 12px 82px 12px 14px;
+                font-size: 14px;
+            }
+            
+            .mic-button {
+                right: 42px;
+                bottom: 6px;
+                width: 32px;
+                height: 32px;
+            }
+            
+            .send-button {
+                right: 6px;
+                bottom: 6px;
+                width: 32px;
+                height: 32px;
+            }
+            
+            .input-waves {
+                right: 76px;
+            }
+            
+            .input-waves .wave-bar {
+                width: 3px;
+                max-height: 24px;
+            }
         }
     </style>
 </head>
@@ -1100,6 +1236,28 @@
                     placeholder="Задайте вопрос..."
                     autocomplete="off"
                 >
+                <div class="input-waves" id="inputWaves">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                </div>
+                <button id="micBtn" class="mic-button" title="Голосовой ввод">
+                    <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                    <svg id="micStop" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                        <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                </button>
                 <button id="sendBtn" class="send-button">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                         <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -1125,6 +1283,154 @@
         
         let isLoading = false;
         let chatHistory = []; // История чата (последние 3 пары вопрос-ответ)
+        
+        // === Голосовой ввод ===
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioContext = null;
+        let analyser = null;
+        let animationId = null;
+        
+        const micBtn = document.getElementById('micBtn');
+        const micIcon = document.getElementById('micIcon');
+        const micStop = document.getElementById('micStop');
+        const inputWaves = document.getElementById('inputWaves');
+        const waveBars = inputWaves.querySelectorAll('.wave-bar');
+        const queryInput = document.getElementById('queryInput');
+        
+        micBtn.addEventListener('click', toggleRecording);
+        
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+        
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+                audioChunks = [];
+                
+                // Web Audio API для анимации волн
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 64;
+                source.connect(analyser);
+                
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    if (audioContext) { audioContext.close(); audioContext = null; }
+                    
+                    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                    await sendAudioForTranscription(blob);
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording');
+                micIcon.style.display = 'none';
+                micStop.style.display = 'block';
+                queryInput.style.color = 'transparent';
+                queryInput.setAttribute('data-placeholder', queryInput.placeholder);
+                queryInput.placeholder = '';
+                inputWaves.classList.add('active');
+                animateWaves();
+            } catch (err) {
+                console.error('Ошибка доступа к микрофону:', err);
+                alert('Нет доступа к микрофону. Разрешите доступ в настройках браузера.');
+            }
+        }
+        
+        function animateWaves() {
+            if (!analyser || !isRecording) return;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Берём 5 частотных диапазонов для 5 столбцов
+            const step = Math.floor(dataArray.length / waveBars.length);
+            waveBars.forEach((bar, i) => {
+                const value = dataArray[i * step] || 0;
+                const height = Math.max(4, (value / 255) * 28);
+                bar.style.height = height + 'px';
+            });
+            
+            animationId = requestAnimationFrame(animateWaves);
+        }
+        
+        function stopRecording() {
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+            micBtn.classList.remove('recording');
+            micBtn.classList.add('processing');
+            micIcon.style.display = 'block';
+            micStop.style.display = 'none';
+            inputWaves.classList.remove('active');
+            inputWaves.classList.add('active', 'processing');
+        }
+        
+        function getSupportedMimeType() {
+            const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+            for (const type of types) {
+                if (MediaRecorder.isTypeSupported(type)) return type;
+            }
+            return 'audio/webm';
+        }
+        
+        async function sendAudioForTranscription(blob) {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                micBtn.classList.remove('processing');
+                showModal('loginModal');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('audio', blob, 'voice.webm');
+                
+                const response = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('auth_token');
+                    showModal('loginModal');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.text) {
+                    const input = document.getElementById('queryInput');
+                    input.value = data.text;
+                    input.focus();
+                } else if (data.error) {
+                    console.error('STT:', data.error);
+                }
+            } catch (err) {
+                console.error('Ошибка отправки аудио:', err);
+            } finally {
+                micBtn.classList.remove('processing');
+                inputWaves.classList.remove('active', 'processing');
+                queryInput.style.color = '';
+                queryInput.placeholder = queryInput.getAttribute('data-placeholder') || 'Задайте вопрос...';
+            }
+        }
         
         // Burger menu functionality
         const burgerMenu = document.getElementById('burgerMenu');
