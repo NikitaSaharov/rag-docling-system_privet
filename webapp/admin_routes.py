@@ -17,9 +17,11 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 QDRANT_URL = os.getenv('QDRANT_URL', 'http://qdrant:6333')
 COLLECTION_NAME = "documents"
 
-# Admin credentials (can be overridden via environment variables)
-ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin_vector')
-ADMIN_PASSWORD_HASH = hashlib.sha256(os.getenv('ADMIN_PASSWORD', '88990GDG').encode()).hexdigest()
+# Admin credentials (set via ADMIN_USERNAME / ADMIN_PASSWORD in .env.local)
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', '')
+ADMIN_PASSWORD_HASH = hashlib.sha256(os.getenv('ADMIN_PASSWORD', '').encode()).hexdigest()
+if not os.getenv('ADMIN_PASSWORD'):
+    print('⚠️  WARNING: ADMIN_PASSWORD not set in environment!')
 
 def admin_required(f):
     """Декоратор для защиты админ-эндпоинтов"""
