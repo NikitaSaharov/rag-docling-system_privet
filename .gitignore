@@ -16,6 +16,10 @@ env/
 ENV/
 .venv
 
+# SQLite базы данных (ПРОДАКШН ДАННЫЕ!)
+*.db
+shared/db/
+
 # Docker volumes и данные (содержат векторную базу)
 qdrant_data/
 ollama_data/
