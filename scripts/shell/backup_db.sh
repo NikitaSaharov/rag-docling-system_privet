@@ -11,8 +11,10 @@ set -e
 # --- Конфигурация ---
 PROJECT_DIR="${PROJECT_DIR:-/opt/docling}"
 DB_SOURCE="$PROJECT_DIR/shared/db/docling.db"
-BACKUP_DIR="$HOME/db_backups"
-MAX_BACKUPS=30  # Хранить последние 30 бэкапов
+LOCAL_BACKUP_DIR="$HOME/db_backups"
+GIT_BACKUP_DIR="$PROJECT_DIR/db_backups"
+MAX_LOCAL_BACKUPS=30   # Локально: 30 последних
+MAX_GIT_BACKUPS=10     # В git: 10 последних (чтобы не раздувать репо)
 
 # --- Цвета ---
 GREEN='\033[0;32m'
@@ -22,45 +24,39 @@ NC='\033[0m'
 
 ok()  { echo -e "  ${GREEN}[OK]${NC} $1"; }
 err() { echo -e "  ${RED}[!!]${NC} $1"; }
+info() { echo -e "  ${YELLOW}[..]${NC} $1"; }
 
 # --- Установка cron ---
 install_cron() {
-    # Бэкап каждые 6 часов (00:00, 06:00, 12:00, 18:00)
     CRON_CMD="0 */6 * * * $PROJECT_DIR/scripts/shell/backup_db.sh >> /var/log/docling_backup.log 2>&1"
 
-    # Проверяем, не добавлен ли уже
     if crontab -l 2>/dev/null | grep -q "backup_db.sh"; then
         echo -e "${YELLOW}Cron задача уже установлена${NC}"
         crontab -l | grep "backup_db.sh"
         return
     fi
 
-    # Добавляем в crontab
     (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
     ok "Cron задача установлена: бэкап каждые 6 часов"
     echo "  Лог: /var/log/docling_backup.log"
-    echo "  Проверить: crontab -l"
-    return
 }
 
-# --- Основной бэкап ---
+# --- Создание бэкапа ---
 do_backup() {
     local timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
-    local backup_file="$BACKUP_DIR/docling_${timestamp}.db"
 
-    mkdir -p "$BACKUP_DIR"
+    mkdir -p "$LOCAL_BACKUP_DIR" "$GIT_BACKUP_DIR"
 
-    # Проверяем, что база существует
     if [ ! -f "$DB_SOURCE" ]; then
         err "База не найдена: $DB_SOURCE"
         exit 1
     fi
 
-    # Безопасное копирование через SQLite backup API (учитывает WAL)
+    # === 1. Локальный бэкап (бинарный .db) ===
+    local local_file="$LOCAL_BACKUP_DIR/docling_${timestamp}.db"
     if command -v sqlite3 &> /dev/null; then
-        sqlite3 "$DB_SOURCE" ".backup '$backup_file'"
+        sqlite3 "$DB_SOURCE" ".backup '$local_file'"
     else
-        # Останавливаем webapp для консистентного копирования
         docker exec docling-webapp python -c "
 import sqlite3
 src = sqlite3.connect('/db/docling.db')
@@ -68,29 +64,66 @@ dst = sqlite3.connect('/tmp/backup.db')
 src.backup(dst)
 src.close()
 dst.close()
-" 2>/dev/null && docker cp docling-webapp:/tmp/backup.db "$backup_file" 2>/dev/null
-
-        # Фолбэк: простое копирование
-        if [ ! -f "$backup_file" ]; then
-            cp "$DB_SOURCE" "$backup_file"
+" 2>/dev/null && docker cp docling-webapp:/tmp/backup.db "$local_file" 2>/dev/null
+        if [ ! -f "$local_file" ]; then
+            cp "$DB_SOURCE" "$local_file"
         fi
     fi
 
-    # Проверяем, что бэкап создан и не пустой
-    if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-        local size=$(du -h "$backup_file" | cut -f1)
-        ok "Бэкап создан: $backup_file ($size)"
+    if [ -f "$local_file" ] && [ -s "$local_file" ]; then
+        ok "Локальный бэкап: $local_file ($(du -h "$local_file" | cut -f1))"
     else
-        err "Бэкап не создан!"
+        err "Локальный бэкап не создан!"
         exit 1
     fi
 
-    # Ротация: удаляем старые бэкапы
-    local count=$(ls -1 "$BACKUP_DIR"/docling_*.db 2>/dev/null | wc -l)
-    if [ "$count" -gt "$MAX_BACKUPS" ]; then
-        local to_delete=$((count - MAX_BACKUPS))
-        ls -1t "$BACKUP_DIR"/docling_*.db | tail -n "$to_delete" | xargs rm -f
-        ok "Удалено $to_delete старых бэкапов (хранится $MAX_BACKUPS)"
+    # Ротация локальных
+    local count=$(ls -1 "$LOCAL_BACKUP_DIR"/docling_*.db 2>/dev/null | wc -l)
+    if [ "$count" -gt "$MAX_LOCAL_BACKUPS" ]; then
+        local to_delete=$((count - MAX_LOCAL_BACKUPS))
+        ls -1t "$LOCAL_BACKUP_DIR"/docling_*.db | tail -n "$to_delete" | xargs rm -f
+        ok "Ротация: удалено $to_delete старых локальных"
+    fi
+
+    # === 2. Git бэкап (SQL-дамп, сжатый) ===
+    local git_file="$GIT_BACKUP_DIR/docling_${timestamp}.sql.gz"
+
+    if command -v sqlite3 &> /dev/null; then
+        sqlite3 "$DB_SOURCE" .dump | gzip > "$git_file"
+    else
+        docker exec docling-webapp python -c "
+import sqlite3, sys
+conn = sqlite3.connect('/db/docling.db')
+for line in conn.iterdump():
+    print(line)
+conn.close()
+" 2>/dev/null | gzip > "$git_file"
+    fi
+
+    if [ -f "$git_file" ] && [ -s "$git_file" ]; then
+        ok "Git бэкап: $git_file ($(du -h "$git_file" | cut -f1))"
+    else
+        err "Git бэкап не создан!"
+        return
+    fi
+
+    # Ротация git-бэкапов
+    local git_count=$(ls -1 "$GIT_BACKUP_DIR"/docling_*.sql.gz 2>/dev/null | wc -l)
+    if [ "$git_count" -gt "$MAX_GIT_BACKUPS" ]; then
+        local git_del=$((git_count - MAX_GIT_BACKUPS))
+        ls -1t "$GIT_BACKUP_DIR"/docling_*.sql.gz | tail -n "$git_del" | xargs rm -f
+        ok "Ротация git: удалено $git_del старых"
+    fi
+
+    # === 3. Пуш в git ===
+    info "Пуш в git..."
+    cd "$PROJECT_DIR"
+    git add db_backups/
+    if git diff --cached --quiet; then
+        ok "Git: изменений нет"
+    else
+        git commit -m "backup: DB $(date +'%Y-%m-%d %H:%M')"
+        git push origin main 2>/dev/null && ok "Git: запушено" || err "Git push не удался"
     fi
 }
 

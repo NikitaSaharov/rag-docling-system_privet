@@ -49,6 +49,10 @@ output/*.txt
 *.backup
 backups/
 
+# Разрешаем бэкапы БД в git (текстовые SQL-дампы)
+!db_backups/
+!db_backups/*.sql.gz
+
 # SSL сертификаты (СЕКРЕТНЫЕ!)
 nginx/ssl/*.pem
 nginx/ssl/*.key
