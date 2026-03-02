@@ -23,10 +23,11 @@ def send_telegram_message(chat_id, text, parse_mode='Markdown'):
         True если успешно, False если ошибка
     """
     if not TELEGRAM_BOT_TOKEN:
-        logger.error("TELEGRAM_BOT_TOKEN не установлен")
+        print("❌ TELEGRAM_BOT_TOKEN не установлен")
         return False
     
     try:
+        print(f"📤 Отправка уведомления пользователю {chat_id}...")
         response = requests.post(
             f"{TELEGRAM_API_URL}/sendMessage",
             json={
@@ -38,14 +39,14 @@ def send_telegram_message(chat_id, text, parse_mode='Markdown'):
         )
         
         if response.status_code == 200:
-            logger.info(f"✅ Уведомление отправлено пользователю {chat_id}")
+            print(f"✅ Уведомление отправлено пользователю {chat_id}")
             return True
         else:
-            logger.error(f"❌ Ошибка отправки уведомления: {response.status_code} - {response.text}")
+            print(f"❌ Ошибка отправки: {response.status_code} - {response.text}")
             return False
     
     except Exception as e:
-        logger.error(f"❌ Исключение при отправке уведомления: {e}")
+        print(f"❌ Исключение при отправке: {e}")
         return False
 
 def notify_access_approved(telegram_id, username=None):

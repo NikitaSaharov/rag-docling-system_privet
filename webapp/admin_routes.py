@@ -475,11 +475,15 @@ def approve_request(request_id):
         
         if success:
             # Отправляем уведомление пользователю
+            print(f"✅ Запрос {request_id} одобрен. user_data={user_data}")
             if user_data and user_data.get('telegram_id'):
-                notify_access_approved(
+                result_notify = notify_access_approved(
                     user_data['telegram_id'],
                     user_data.get('username')
                 )
+                print(f"📤 Результат уведомления: {result_notify}")
+            else:
+                print(f"⚠️ Нет user_data или telegram_id для уведомления")
             
             return jsonify({
                 'success': True,
