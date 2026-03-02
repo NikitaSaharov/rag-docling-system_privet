@@ -18,6 +18,9 @@ from examples_loader import load_examples, format_examples_for_prompt
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
+# Инициализируем БД при импорте (важно для Gunicorn, который не выполняет __main__)
+db.init_db()
+
 # Session configuration
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)  # Admin session lasts 3 hours
@@ -850,11 +853,14 @@ def telegram_search():
             # Сохраняем вопрос и ответ
             db.add_chat_message(session['id'], 'user', query)
             db.add_chat_message(session['id'], 'assistant', answer)
-        
-        # Также логируем в query_logs для обратной совместимости
-        db.log_query(user['id'], query, answer)
     except Exception as e:
         print(f"Ошибка сохранения чата: {e}")
+    
+    # Логируем в query_logs отдельно, чтобы не терять при ошибке сессии
+    try:
+        db.log_query(user['id'], query, answer)
+    except Exception as e:
+        print(f"Ошибка логирования запроса: {e}")
     
     return jsonify({
         'answer': answer,
