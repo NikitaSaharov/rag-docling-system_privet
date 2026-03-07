@@ -7,7 +7,7 @@
     <link rel="icon" type="image/webp" href="{{ url_for('static', filename='favicon.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -16,18 +16,18 @@
         }
         
         :root {
-            /* Цвета из globaldent.group */
-            --primary-gold: #bfab8a;
-            --text-dark: #2d2d2d;
-            --text-secondary: #6f6f6f;
+            /* Positivus Design System */
+            --primary-gold: #B9FF66;
+            --text-dark: #191A23;
+            --text-secondary: #787878;
             --bg-white: #ffffff;
-            --bg-light: #f7f7f7;
-            --bg-lighter: #efefef;
-            --border-color: #e5e5e5;
+            --bg-light: #F3F3F3;
+            --bg-lighter: #E0E0E0;
+            --border-color: #E0E0E0;
         }
         
         body {
-            font-family: 'Open Sans', Arial, sans-serif;
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-white);
             height: 100vh;
             height: 100dvh;
@@ -95,7 +95,9 @@
         }
         
         .logo-accent {
-            color: var(--primary-gold);
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; background: var(--text-dark); color: var(--primary-gold);
+            border-radius: 6px; font-size: 16px; margin-right: 4px;
         }
         
         .main-container {
@@ -142,11 +144,13 @@
         }
         
         .message.user .message-avatar {
-            background: linear-gradient(135deg, var(--primary-gold) 0%, #a89270 100%);
+            background: var(--primary-gold);
+            color: var(--text-dark);
         }
         
         .message.assistant .message-avatar {
-            background: linear-gradient(135deg, var(--text-dark) 0%, var(--text-secondary) 100%);
+            background: var(--text-dark);
+            color: var(--primary-gold);
         }
         
         .message-content {
@@ -195,16 +199,16 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 12px;
-            color: var(--primary-gold);
+            color: var(--text-dark);
             cursor: pointer;
             transition: all 0.2s;
             font-weight: 600;
         }
         
         .toggle-sources-btn:hover {
-            background: var(--primary-gold);
+            background: var(--text-dark);
             color: var(--bg-white);
-            border-color: var(--primary-gold);
+            border-color: var(--text-dark);
         }
         
         .source {
@@ -233,7 +237,7 @@
         .suggestions {
             margin-top: 16px;
             padding: 12px;
-            background: rgba(191, 171, 138, 0.08);
+            background: rgba(185, 255, 102, 0.08);
             border-radius: 8px;
             border-left: 3px solid var(--primary-gold);
         }
@@ -241,7 +245,7 @@
         .suggestions-title {
             font-size: 12px;
             font-weight: 600;
-            color: var(--primary-gold);
+            color: var(--text-dark);
             margin-bottom: 8px;
         }
         
@@ -266,7 +270,7 @@
         }
         
         .suggestion-btn:hover {
-            background: rgba(191, 171, 138, 0.1);
+            background: rgba(185, 255, 102, 0.1);
             border-color: var(--primary-gold);
             transform: translateX(4px);
         }
@@ -327,7 +331,7 @@
         }
         
         .send-button:hover:not(:disabled) {
-            background: #a89270;
+            background: #a8f050;
             transform: translateY(-1px);
         }
         
@@ -494,9 +498,9 @@
         .auth-button {
             padding: 8px 16px;
             background: var(--primary-gold);
-            color: white;
+            color: var(--text-dark);
             border: none;
-            border-radius: 8px;
+            border-radius: 100px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
@@ -504,7 +508,7 @@
         }
         
         .auth-button:hover {
-            background: #a89270;
+            background: #a8f050;
             transform: translateY(-1px);
         }
         
@@ -596,9 +600,9 @@
             width: 100%;
             padding: 10px;
             background: var(--primary-gold);
-            color: white;
+            color: var(--text-dark);
             border: none;
-            border-radius: 8px;
+            border-radius: 100px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
@@ -606,7 +610,7 @@
         }
         
         .sidebar-auth-btn:hover {
-            background: #a89270;
+            background: #a8f050;
         }
         
         .sidebar-branding {
@@ -616,17 +620,17 @@
             color: var(--text-dark);
         }
         
-        .sidebar-branding .brand-accent {
-            color: var(--primary-gold);
+        .sidebar-branding .logo-accent {
+            width: 24px; height: 24px; font-size: 14px;
         }
         
         .new-chat-btn {
             width: 100%;
             padding: 10px;
             background: var(--primary-gold);
-            color: white;
+            color: var(--text-dark);
             border: none;
-            border-radius: 8px;
+            border-radius: 100px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
@@ -634,7 +638,7 @@
         }
         
         .new-chat-btn:hover {
-            background: #a89270;
+            background: #a8f050;
         }
         
         .sessions-list {
@@ -654,11 +658,11 @@
         }
         
         .session-item:hover {
-            background: rgba(191, 171, 138, 0.1);
+            background: rgba(185, 255, 102, 0.08);
         }
         
         .session-item.active {
-            background: rgba(191, 171, 138, 0.2);
+            background: rgba(185, 255, 102, 0.15);
             border-left: 3px solid var(--primary-gold);
         }
         
@@ -707,7 +711,7 @@
         .session-action-btn:hover {
             background: var(--primary-gold);
             border-color: var(--primary-gold);
-            color: white;
+            color: var(--text-dark);
         }
         
         /* Modal */
@@ -848,11 +852,12 @@
         
         .modal-btn-primary {
             background: var(--primary-gold);
-            color: white;
+            color: var(--text-dark);
+            border-radius: 100px;
         }
         
         .modal-btn-primary:hover:not(:disabled) {
-            background: #a89270;
+            background: #a8f050;
         }
         
         .modal-btn-primary:disabled {
@@ -864,6 +869,7 @@
             background: transparent;
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
+            border-radius: 100px;
         }
         
         .modal-btn-secondary:hover {
@@ -1042,15 +1048,15 @@
             <span class="burger-line"></span>
         </button>
         <div class="logo">
-            <span class="logo-accent">Vector</span>Stom
+            <span class="logo-accent">✦</span>VectorStom
         </div>
     </header>
     
     <!-- Sidebar -->
     <div class="sidebar mobile-hidden" id="sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-branding">
-                <span class="brand-accent">VECTOR</span> STOM
+        <div class="sidebar-branding">
+                <span class="logo-accent">✦</span> VectorStom
             </div>
         </div>
         

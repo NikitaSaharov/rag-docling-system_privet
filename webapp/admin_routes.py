@@ -15,7 +15,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 # Qdrant settings
 QDRANT_URL = os.getenv('QDRANT_URL', 'http://qdrant:6333')
-COLLECTION_NAME = "documents"
+COLLECTION_NAME = os.getenv('QDRANT_COLLECTION', 'documents')
 
 # Admin credentials (set via ADMIN_USERNAME / ADMIN_PASSWORD in .env.local)
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', '')

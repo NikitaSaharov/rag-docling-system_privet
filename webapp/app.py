@@ -35,12 +35,17 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
 OLLAMA_URL = "http://ollama:11434"
 QDRANT_URL = "http://qdrant:6333"
-COLLECTION_NAME = "documents"
+COLLECTION_NAME = os.getenv('QDRANT_COLLECTION', 'documents')
 
 # Polza.ai API настройки (OpenAI-совместимый endpoint)
 POLZA_API_KEY = os.getenv('POLZA_API_KEY', '')
 POLZA_URL = "https://api.polza.ai/v1/chat/completions"
 DEEPSEEK_MODEL = "deepseek-chat"
+
+# Embedding API (тот же Polza.ai, OpenAI-compatible)
+EMBEDDING_API_URL = os.getenv('EMBEDDING_API_URL', 'https://api.polza.ai/v1')
+EMBEDDING_API_KEY = os.getenv('EMBEDDING_API_KEY', '') or os.getenv('POLZA_API_KEY', '')
+EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
 
 # Speech-to-Text (Polza.ai)
 POLZA_STT_API_KEY = os.getenv('POLZA_STT_API_KEY', '')
@@ -52,15 +57,23 @@ ALLOWED_EXTENSIONS = {'pdf', 'docx', 'pptx', 'txt', 'md', 'doc'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_embedding(text, model="nomic-embed-text"):
-    """Получает эмбеддинг текста"""
+def get_embedding(text, model=None):
+    """Получает эмбеддинг текста через Polza.ai API (OpenAI-compatible)"""
     try:
         response = requests.post(
-            f"{OLLAMA_URL}/api/embeddings",
-            json={"model": model, "prompt": text},
-            timeout=60
+            f"{EMBEDDING_API_URL}/embeddings",
+            headers={
+                "Authorization": f"Bearer {EMBEDDING_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model or EMBEDDING_MODEL,
+                "input": text,
+            },
+            timeout=30,
         )
-        return response.json()["embedding"]
+        response.raise_for_status()
+        return response.json()["data"][0]["embedding"]
     except Exception as e:
         print(f"Ошибка получения эмбеддинга: {e}")
         return None
