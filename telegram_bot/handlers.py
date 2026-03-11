@@ -50,6 +50,25 @@ def _escape_md(text: str) -> str:
         text = text.replace(ch, f'\\{ch}')
     return text
 
+def strip_markdown(text: str) -> str:
+    """Убирает markdown-символы из ответа LLM для Telegram"""
+    # Убираем **жирный** и *курсив*
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'(?<!\\)\*(.+?)(?<!\\)\*', r'\1', text)
+    # Убираем __подчёркивание__
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    # Убираем # заголовки в начале строк
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Убираем markdown-таблицы: строки-разделители |---|---|
+    text = re.sub(r'^\|[\s\-:|]+\|\s*$', '', text, flags=re.MULTILINE)
+    # Убираем | в начале/конце строк таблиц, оставляя содержимое
+    text = re.sub(r'^\|\s*(.+?)\s*\|\s*$',
+                  lambda m: ' | '.join(c.strip() for c in m.group(1).split('|')),
+                  text, flags=re.MULTILINE)
+    # Убираем пустые строки подряд (от удалённых разделителей)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 BOT_DESCRIPTION = (
     "Я - бот-помощник VectorStom по управлению стоматологической клиникой.\n\n"
     "Мои возможности:\n"
@@ -380,6 +399,7 @@ def register_handlers(dp, flask_api_url):
                         return
                     
                     answer = result.get('answer', 'Ответ не получен')
+                    answer = strip_markdown(answer)
                     sources = result.get('sources', [])
                     
                     # Парсим suggestions
@@ -487,6 +507,7 @@ def register_handlers(dp, flask_api_url):
                         return
                     
                     answer = result.get('answer', 'Ответ не получен')
+                    answer = strip_markdown(answer)
                     sources = result.get('sources', [])
                     
                     # DEBUG: логируем последние 500 символов ответа
@@ -669,6 +690,7 @@ def register_handlers(dp, flask_api_url):
                             return
                         
                         answer = result.get('answer', 'Ответ не получен')
+                        answer = strip_markdown(answer)
                         sources = result.get('sources', [])
                         
                         # Парсим suggestions
