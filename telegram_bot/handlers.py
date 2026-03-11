@@ -37,6 +37,19 @@ def is_meta_question(text: str) -> bool:
     """Проверяет, спрашивает ли пользователь о функционале/возможностях бота"""
     return bool(_META_RE.search(text.strip()))
 
+async def _safe_delete(msg):
+    """Безопасное удаление сообщения (не бросает исключений)"""
+    try:
+        await msg.delete()
+    except Exception:
+        pass
+
+def _escape_md(text: str) -> str:
+    """Экранирует спецсимволы Markdown в тексте"""
+    for ch in ('*', '_', '`', '['):
+        text = text.replace(ch, f'\\{ch}')
+    return text
+
 BOT_DESCRIPTION = (
     "Я - бот-помощник VectorStom по управлению стоматологической клиникой.\n\n"
     "Мои возможности:\n"
@@ -355,7 +368,7 @@ def register_handlers(dp, flask_api_url):
                 ) as response:
                     result = await response.json()
                     
-                    await processing_msg.delete()
+                    await _safe_delete(processing_msg)
                     
                     if response.status == 403 or not result.get('authorized'):
                         await message.answer("🚫 Доступ запрещен.")
@@ -416,17 +429,11 @@ def register_handlers(dp, flask_api_url):
         
         except aiohttp.ClientError as e:
             logger.error(f"Ошибка подключения: {e}")
-            try:
-                await processing_msg.delete()
-            except:
-                pass
+            await _safe_delete(processing_msg)
             await message.answer("❌ Ошибка подключения к серверу.")
         except Exception as e:
             logger.error(f"Ошибка обработки голосового: {e}", exc_info=True)
-            try:
-                await processing_msg.delete()
-            except:
-                pass
+            await _safe_delete(processing_msg)
             await message.answer("❌ Ошибка при обработке голосового сообщения.")
     
     @router.message(F.text)
@@ -466,7 +473,7 @@ def register_handlers(dp, flask_api_url):
                     result = await response.json()
                     
                     # Удаляем сообщение о поиске
-                    await processing_msg.delete()
+                    await _safe_delete(processing_msg)
                     
                     if response.status == 403 or not result.get('authorized'):
                         await message.answer(
@@ -544,14 +551,14 @@ def register_handlers(dp, flask_api_url):
                     logger.info(f"Ответ отправлен пользователю {user_id}")
         
         except aiohttp.ClientError as e:
-            await processing_msg.delete()
+            await _safe_delete(processing_msg)
             logger.error(f"Ошибка подключения к API: {e}")
             await message.answer(
                 "❌ Ошибка подключения к серверу.\n"
                 "Попробуйте позже."
             )
         except Exception as e:
-            await processing_msg.delete()
+            await _safe_delete(processing_msg)
             logger.error(f"Ошибка обработки запроса: {e}", exc_info=True)
             await message.answer(
                 "❌ Произошла ошибка при обработке запроса.\n"
@@ -575,7 +582,7 @@ def register_handlers(dp, flask_api_url):
                 return
             
             # Формируем сообщение с источниками
-            sources_text = "📚 *Источники:*\n\n"
+            sources_text = "📚 Источники:\n\n"
             
             for idx, source in enumerate(sources[:5], 1):  # Показываем топ-5
                 filename = source.get('filename', 'Неизвестно')
@@ -583,14 +590,11 @@ def register_handlers(dp, flask_api_url):
                 score = source.get('score', 0)
                 
                 sources_text += (
-                    f"{idx}. *{filename}* ({int(score * 100)}%)\n"
+                    f"{idx}. {filename} ({int(score * 100)}%)\n"
                     f"{text}...\n\n"
                 )
             
-            await callback.message.answer(
-                sources_text,
-                parse_mode="Markdown"
-            )
+            await callback.message.answer(sources_text)
             await callback.answer()
             
         except Exception as e:
@@ -653,7 +657,7 @@ def register_handlers(dp, flask_api_url):
                         result = await response.json()
                         
                         # Удаляем сообщение о поиске
-                        await processing_msg.delete()
+                        await _safe_delete(processing_msg)
                         
                         if response.status == 403 or not result.get('authorized'):
                             await callback.message.answer("🚫 Доступ запрещен.")
@@ -713,7 +717,7 @@ def register_handlers(dp, flask_api_url):
                         await callback.message.answer(answer, reply_markup=keyboard)
                         
             except Exception as e:
-                await processing_msg.delete()
+                await _safe_delete(processing_msg)
                 logger.error(f"Ошибка обработки suggestion: {e}", exc_info=True)
                 await callback.message.answer("❌ Ошибка при обработке запроса.")
                 
