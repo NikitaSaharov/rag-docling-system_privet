@@ -412,6 +412,149 @@
             border-color: var(--primary-gold);
             color: var(--primary-gold);
         }
+        
+        /* Hamburger toggle */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            color: var(--text-dark);
+        }
+        
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 199;
+        }
+        
+        /* ===== MOBILE ===== */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .sidebar {
+                position: fixed;
+                top: 0; left: -280px;
+                width: 260px;
+                height: 100%;
+                z-index: 200;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .sidebar-overlay.open {
+                display: block;
+            }
+            
+            .main-container {
+                width: 100%;
+                height: 100vh;
+            }
+            
+            .header {
+                padding: 14px 16px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .header-title {
+                font-size: 18px;
+            }
+            
+            .content {
+                padding: 16px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+            
+            .stat-card {
+                padding: 14px;
+            }
+            
+            .stat-value {
+                font-size: 24px;
+            }
+            
+            .stat-label {
+                font-size: 11px;
+            }
+            
+            .card {
+                padding: 16px;
+                border-radius: 10px;
+                margin-bottom: 16px;
+            }
+            
+            .card-title {
+                font-size: 14px;
+                margin-bottom: 12px;
+            }
+            
+            /* Tables: hide less important columns on mobile */
+            table th, table td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+            
+            /* Action buttons stack vertically */
+            td .btn {
+                display: block;
+                width: 100%;
+                margin: 0 0 4px 0 !important;
+                text-align: center;
+                font-size: 12px !important;
+                padding: 6px 8px !important;
+            }
+            
+            /* Login modal */
+            .login-modal {
+                margin: 16px;
+                padding: 28px 20px;
+            }
+            
+            /* Chat modal */
+            .modal > div {
+                width: 95% !important;
+                max-height: 90vh !important;
+            }
+            
+            .form-input {
+                font-size: 16px; /* prevents iOS zoom on focus */
+            }
+        }
+        
+        /* ===== SMALL MOBILE (< 480px) ===== */
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+            
+            .header-title {
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -434,8 +577,11 @@
             </form>
         </div>
     </div>
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
         <div class="sidebar-header"><span class="sidebar-logo">✦</span> VectorStom</div>
         <div class="menu-item active" data-section="telegram-users">
             📱 Telegram
@@ -467,6 +613,7 @@
     <!-- Main Content -->
     <div class="main-container">
         <div class="header">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
             <div class="header-title" id="pageTitle">Управление пользователями</div>
         </div>
         
@@ -1448,6 +1595,22 @@
         
         // Initial auth check
         checkAuth();
+        
+        // ========== MOBILE SIDEBAR ==========
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+        // Close sidebar when menu item clicked on mobile
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
+        });
     </script>
 </body>
 </html>
