@@ -165,6 +165,53 @@
             white-space: pre-wrap;
         }
         
+        /* Таблицы в сообщениях */
+        .message-text table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+            font-size: 14px;
+            white-space: normal;
+        }
+        
+        .message-text th,
+        .message-text td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        
+        .message-text th {
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .message-text tr:nth-child(even) {
+            background: rgba(243, 243, 243, 0.5);
+        }
+        
+        .message-text tr:hover {
+            background: rgba(185, 255, 102, 0.08);
+        }
+        
+        .message-text strong {
+            font-weight: 600;
+        }
+        
+        /* Таблицы на мобильном */
+        .table-scroll-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 12px 0;
+            white-space: normal;
+        }
+        
+        .table-scroll-wrapper table {
+            margin: 0;
+            min-width: 300px;
+        }
+        
         .sources {
             margin-top: 16px;
             padding: 12px;
@@ -1598,6 +1645,67 @@
             return { cleanText, suggestions };
         }
         
+        function formatMessage(text) {
+            // Экранирование HTML
+            function escapeHtml(str) {
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+            
+            const lines = text.split('\n');
+            const result = [];
+            let i = 0;
+            
+            while (i < lines.length) {
+                const line = lines[i];
+                
+                // Проверяем, начинается ли таблица (строка с | и следующая с |---|)
+                if (line.trim().startsWith('|') && line.trim().endsWith('|') &&
+                    i + 1 < lines.length && /^\|[\s\-:|]+\|$/.test(lines[i + 1].trim())) {
+                    
+                    // Собираем все строки таблицы
+                    const tableLines = [];
+                    while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+                        tableLines.push(lines[i].trim());
+                        i++;
+                    }
+                    
+                    if (tableLines.length >= 2) {
+                        let html = '<div class="table-scroll-wrapper"><table>';
+                        
+                        // Заголовок
+                        const headerCells = tableLines[0].split('|').filter(c => c.trim() !== '');
+                        html += '<thead><tr>';
+                        for (const cell of headerCells) {
+                            html += '<th>' + escapeHtml(cell.trim()) + '</th>';
+                        }
+                        html += '</tr></thead>';
+                        
+                        // Строки данных (пропускаем разделитель |---|)
+                        html += '<tbody>';
+                        for (let r = 2; r < tableLines.length; r++) {
+                            const cells = tableLines[r].split('|').filter(c => c.trim() !== '');
+                            html += '<tr>';
+                            for (const cell of cells) {
+                                html += '<td>' + escapeHtml(cell.trim()) + '</td>';
+                            }
+                            html += '</tr>';
+                        }
+                        html += '</tbody></table></div>';
+                        result.push(html);
+                    }
+                    continue;
+                }
+                
+                // Обычная строка - экранируем и обрабатываем **жирный**
+                let escaped = escapeHtml(line);
+                escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                result.push(escaped);
+                i++;
+            }
+            
+            return result.join('\n');
+        }
+        
         function addMessage(type, text, sources = null) {
             const container = document.getElementById('messagesContainer');
             const id = 'msg-' + Date.now();
@@ -1624,7 +1732,11 @@
             
             const textDiv = document.createElement('div');
             textDiv.className = 'message-text';
-            textDiv.textContent = cleanText;
+            if (type === 'assistant') {
+                textDiv.innerHTML = formatMessage(cleanText);
+            } else {
+                textDiv.textContent = cleanText;
+            }
             
             content.appendChild(textDiv);
             
