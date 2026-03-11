@@ -959,6 +959,11 @@
             margin-left: 280px;
         }
         
+        .glass-header,
+        .main-container {
+            transition: margin-left 0.3s ease;
+        }
+        
         .toggle-sidebar-btn {
             display: none;
             position: fixed;
@@ -976,26 +981,34 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
-        /* Mobile overlay (transparent - just for click detection) */
+        /* Mobile overlay - only on small screens */
         .sidebar-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: transparent;
+            background: rgba(0, 0, 0, 0.3);
             z-index: 1000;
             display: none;
         }
         
         .sidebar-overlay.active {
-            display: block;
+            display: none; /* Скрыт на десктопе */
         }
         
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .burger-menu {
                 display: flex;
+            }
+            
+            .sidebar-overlay.active {
+                display: block; /* Оверлей только на мобильном */
+            }
+            
+            .with-sidebar {
+                margin-left: 0; /* Не сдвигаем на мобильном */
             }
             
             .glass-header {
@@ -1490,10 +1503,27 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         
+        const glassHeader = document.querySelector('.glass-header');
+        const mainContainer = document.querySelector('.main-container');
+        
         function toggleSidebar() {
+            const isOpening = sidebar.classList.contains('mobile-hidden');
             sidebar.classList.toggle('mobile-hidden');
-            sidebarOverlay.classList.toggle('active');
             burgerMenu.classList.toggle('active');
+            
+            if (window.innerWidth > 768) {
+                // Десктоп: сдвигаем контент, без оверлея
+                if (isOpening) {
+                    glassHeader.classList.add('with-sidebar');
+                    mainContainer.classList.add('with-sidebar');
+                } else {
+                    glassHeader.classList.remove('with-sidebar');
+                    mainContainer.classList.remove('with-sidebar');
+                }
+            } else {
+                // Мобильный: оверлей
+                sidebarOverlay.classList.toggle('active');
+            }
         }
         
         burgerMenu.addEventListener('click', toggleSidebar);
