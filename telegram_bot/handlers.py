@@ -355,7 +355,7 @@ def register_handlers(dp, flask_api_url):
                 return
             
             logger.info(f"Распознано от {user_id}: {text[:80]}")
-            await processing_msg.edit_text(f"🔍 Распознано: «{text}»\n\nИщу ответ...")
+            await processing_msg.edit_text(f"🎤 Распознано: «{text}»\n\n✨ Скоро вернусь с ответом...")
             
             # Отправляем распознанный текст как поисковый запрос
             history = chat_history.get(user_id, [])
@@ -451,7 +451,7 @@ def register_handlers(dp, flask_api_url):
             return
         
         # Отправляем уведомление о начале обработки
-        processing_msg = await message.answer("🔍 Ищу ответ...")
+        processing_msg = await message.answer("✨ Скоро вернусь с ответом...")
         
         try:
             # Получаем историю чата
@@ -635,7 +635,7 @@ def register_handlers(dp, flask_api_url):
             await callback.message.answer(f"👤 {selected_query}")
             
             # Показываем загрузку
-            processing_msg = await callback.message.answer("🔍 Ищу ответ...")
+            processing_msg = await callback.message.answer("✨ Скоро вернусь с ответом...")
             
             try:
                 # Получаем историю чата
