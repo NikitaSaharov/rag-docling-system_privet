@@ -52,6 +52,26 @@ app.config['UPLOAD_FOLDER'] = '/documents'
 app.config['PROCESSED_FOLDER'] = '/shared/processed'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
+import re as _re
+
+# === Детекция "demand" сообщений ("Ответь!", "Дай ответ" и т.п.) ===
+_DEMAND_PATTERNS = [
+    r'^\s*отв[её]ть',                 # ответь / ответь!
+    r'^\s*ну\s+отв[её]ть',            # ну ответь
+    r'дай\s+ответ',                    # дай ответ
+    r'где\s+ответ',                    # где ответ
+    r'где\s+мой\s+ответ',             # где мой ответ
+    r'почему\s+не\s+отвеча',          # почему не отвечаешь
+    r'отвечай',                        # отвечай!
+    r'ответь\s+на\s+(заданный|мой|предыдущий)',  # ответь на заданный вопрос
+    r'^\s*ответ\s*[!?.]*\s*$',        # просто "Ответ" / "Ответ!"
+]
+_DEMAND_RE = _re.compile('|'.join(_DEMAND_PATTERNS), _re.IGNORECASE)
+
+def is_demand_message(text: str) -> bool:
+    """Проверяет, является ли сообщение требованием дать ответ на предыдущий вопрос"""
+    return bool(_DEMAND_RE.search(text.strip()))
+
 OLLAMA_URL = "http://ollama:11434"
 QDRANT_URL = "http://qdrant:6333"
 COLLECTION_NAME = os.getenv('QDRANT_COLLECTION', 'documents')
@@ -579,6 +599,13 @@ def ask_llm(query, context, model="deepseek"):
 Формула: Кзаг = tзаг / tраб х 100%
 Норма: 85% и более - зеленая зона"
 
+ВАЖНО - ПОВТОРНЫЕ ТРЕБОВАНИЯ ОТВЕТА:
+Если пользователь пишет "Ответь", "Дай ответ", "Где ответ", "Почему не отвечаешь" и подобное - это значит, что он ТРЕБУЕТ ответ на свой ПРЕДЫДУЩИЙ вопрос. В этом случае:
+1. ОБЯЗАТЕЛЬНО дай ответ на предыдущий вопрос пользователя
+2. Используй ВЕСЬ доступный контекст из базы знаний
+3. Не переспрашивай и не уточняй - просто ответь на заданный ранее вопрос
+4. Если совсем нет информации - предложи переформулировки исходного вопроса
+
 {examples_text}"""
     
     user_prompt = f"""
@@ -827,15 +854,25 @@ def telegram_search():
             'authorized': False
         }), 403
     
-    # Если есть история - добавляем контекст предыдущего вопроса
-    if history:
+    # Детекция demand-сообщений ("Ответь!", "Дай ответ" и т.п.)
+    search_query = query  # По умолчанию ищем по сырому запросу
+    if history and is_demand_message(query):
+        # Пользователь требует ответ на предыдущий вопрос — ищем по НЕМУ
+        search_query = history[-1]['question']
+        query_with_context = (
+            f"Пользователь ранее задал вопрос: {history[-1]['question']}\n"
+            f"Система не смогла дать ответ или ответила неудовлетворительно.\n"
+            f"Пользователь требует ответ (написал: \"{query}\").\n\n"
+            f"ОБЯЗАТЕЛЬНО дай полный, подробный ответ на вопрос: {history[-1]['question']}"
+        )
+    elif history:
         last_qa = history[-1]
         query_with_context = f"Предыдущий вопрос: {last_qa['question']}\nПредыдущий ответ: {last_qa['answer'][:300]}...\n\nТекущий вопрос: {query}"
     else:
         query_with_context = query
     
     # Поиск документов
-    results = search_documents(query, limit=15)
+    results = search_documents(search_query, limit=15)
     
     if not results:
         return jsonify({
@@ -951,16 +988,24 @@ def search():
     if not query:
         return jsonify({'error': 'Запрос пустой'}), 400
     
-    # Если есть история - добавляем контекст предыдущего вопроса
-    if history:
-        # Берем последний вопрос-ответ для контекста
+    # Детекция demand-сообщений ("Ответь!", "Дай ответ" и т.п.)
+    search_query = query
+    if history and is_demand_message(query):
+        search_query = history[-1]['question']
+        query_with_context = (
+            f"Пользователь ранее задал вопрос: {history[-1]['question']}\n"
+            f"Система не смогла дать ответ или ответила неудовлетворительно.\n"
+            f"Пользователь требует ответ (написал: \"{query}\").\n\n"
+            f"ОБЯЗАТЕЛЬНО дай полный, подробный ответ на вопрос: {history[-1]['question']}"
+        )
+    elif history:
         last_qa = history[-1]
         query_with_context = f"Предыдущий вопрос: {last_qa['question']}\nПредыдущий ответ: {last_qa['answer'][:300]}...\n\nТекущий вопрос: {query}"
     else:
         query_with_context = query
     
     # Поиск документов - увеличено для лучшего поиска формул
-    results = search_documents(query, limit=15)
+    results = search_documents(search_query, limit=15)
     
     if not results:
         return jsonify({
