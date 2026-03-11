@@ -7,7 +7,7 @@ import re
 import requests
 import os
 import secrets
-import hashlib
+import bcrypt
 from functools import wraps
 from telegram_notify import notify_access_approved, notify_access_rejected
 
@@ -19,8 +19,9 @@ COLLECTION_NAME = os.getenv('QDRANT_COLLECTION', 'documents')
 
 # Admin credentials (set via ADMIN_USERNAME / ADMIN_PASSWORD in .env.local)
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', '')
-ADMIN_PASSWORD_HASH = hashlib.sha256(os.getenv('ADMIN_PASSWORD', '').encode()).hexdigest()
-if not os.getenv('ADMIN_PASSWORD'):
+_admin_password = os.getenv('ADMIN_PASSWORD', '')
+ADMIN_PASSWORD_HASH = bcrypt.hashpw(_admin_password.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8') if _admin_password else ''
+if not _admin_password:
     print('⚠️  WARNING: ADMIN_PASSWORD not set in environment!')
 
 def admin_required(f):
@@ -40,9 +41,7 @@ def admin_login():
     username = data.get('username', '')
     password = data.get('password', '')
     
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    
-    if username == ADMIN_USERNAME and password_hash == ADMIN_PASSWORD_HASH:
+    if username == ADMIN_USERNAME and ADMIN_PASSWORD_HASH and bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH.encode('utf-8')):
         session['admin_logged_in'] = True
         session.permanent = True  # Сессия сохраняется 
         return jsonify({'success': True, 'message': 'Вход выполнен'})

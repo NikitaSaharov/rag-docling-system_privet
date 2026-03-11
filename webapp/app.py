@@ -18,6 +18,15 @@ from examples_loader import load_examples, format_examples_for_prompt
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
+# CORS — разрешаем только наш домен
+from flask_cors import CORS
+CORS(app, origins=['https://gdgbaza.ru', 'https://www.gdgbaza.ru'], supports_credentials=True)
+
+# Rate limiter
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='memory://')
+
 # Инициализируем БД при импорте (важно для Gunicorn, который не выполняет __main__)
 db.init_db()
 
@@ -29,6 +38,16 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)  # Admin session l
 app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(chat_bp)
+
+# Rate limits на аутентификацию (защита от brute-force)
+limiter.limit('10/minute')(app.view_functions['auth.login'])
+limiter.limit('5/hour')(app.view_functions['auth.register'])
+limiter.limit('10/minute')(app.view_functions['auth.verify_email'])
+limiter.limit('5/minute')(app.view_functions['auth.resend_verification'])
+limiter.limit('5/minute')(app.view_functions['auth.forgot_password'])
+limiter.limit('10/minute')(app.view_functions['auth.verify_password_reset_code'])
+limiter.limit('10/minute')(app.view_functions['admin.admin_login'])
+
 app.config['UPLOAD_FOLDER'] = '/documents'
 app.config['PROCESSED_FOLDER'] = '/shared/processed'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
