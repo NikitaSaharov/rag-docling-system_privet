@@ -696,7 +696,33 @@ def ask_llm(query, context, model="deepseek", channel="telegram"):
             timeout=60  # Уменьшили таймаут, т.к. DeepSeek быстрый
         )
         response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+        content = response.json()["choices"][0]["message"]["content"]
+        if not content or not content.strip():
+            print("WARNING: DeepSeek вернул пустой ответ — повторная попытка с temperature=0.3")
+            # Повторная попытка с чуть выше temperature
+            retry_response = requests.post(
+                POLZA_URL,
+                headers={
+                    "Authorization": f"Bearer {POLZA_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": DEEPSEEK_MODEL,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.3,
+                    "top_p": 0.95,
+                    "max_tokens": 4000
+                },
+                timeout=60
+            )
+            retry_response.raise_for_status()
+            content = retry_response.json()["choices"][0]["message"]["content"]
+        if not content or not content.strip():
+            return "На данный момент у меня недостаточно информации для ответа на этот вопрос. Попробуйте переформулировать запрос."
+        return content
     except Exception as e:
         # Возвращаем понятную ошибку без fallback на Ollama
         error_msg = str(e)

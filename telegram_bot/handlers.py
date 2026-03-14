@@ -517,6 +517,11 @@ def register_handlers(dp, flask_api_url):
                     # DEBUG: логируем последние 500 символов ответа
                     logger.info(f"Последние 500 символов ответа: ...{answer[-500:]}")
                     
+                    # Защита от пустого ответа
+                    if not answer.strip():
+                        logger.warning("Получен пустой ответ от Flask API — отправляем fallback")
+                        answer = "На данный момент у меня недостаточно информации для ответа. Попробуйте переформулировать вопрос."
+                    
                     # Парсим suggestions из ответа (НО ОСТАВЛЯЕМ ИХ В ТЕКСТЕ!)
                     suggestions, _ = parse_suggestions(answer)
                     logger.info(f"Парсинг suggestions: найдено {len(suggestions)} вопросов")
