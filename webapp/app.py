@@ -988,9 +988,15 @@ def telegram_search():
     context = "\n\n".join(spravochnik_parts + other_parts)
     # Ограничиваем контекст: при > 60К символов DeepSeek возвращает пустой ответ
     MAX_CONTEXT_CHARS = 60000
-    if len(context) > MAX_CONTEXT_CHARS:
+    orig_len = len(context)
+    if orig_len > MAX_CONTEXT_CHARS:
         context = context[:MAX_CONTEXT_CHARS]
-        print(f"[CONTEXT] Обрезан до {MAX_CONTEXT_CHARS} символов")
+        print(f"[CONTEXT] Обрезан {orig_len} -> {MAX_CONTEXT_CHARS} символов", flush=True)
+    else:
+        print(f"[CONTEXT] Размер контекста: {orig_len} символов (не обрезан)", flush=True)
+    # DEBUG: dump context size to file
+    with open('/app/debug_context.txt', 'w') as _f:
+        _f.write(f'orig_len={orig_len}\nfinal_len={len(context)}\nquery={query_with_context[:100]}\n')
     sources = [{
         'filename': r["payload"]["filename"],
         'text': r["payload"]["text"][:200] + "...",
