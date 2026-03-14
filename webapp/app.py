@@ -963,6 +963,7 @@ def telegram_search():
         })
     
     # Формируем контекст
+    print(f"[DEBUG] results (top 5): {[(r['payload']['chunk_index'], round(r['score'],3)) for r in results[:5]]}", flush=True)
     expanded_results = expand_context_around_chunks(results, window=1)
     spravochnik_parts = []
     other_parts = []
