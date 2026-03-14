@@ -751,15 +751,64 @@ def ask_llm(query, context, model="deepseek", channel="telegram"):
         else:
             return f"⚠️ Ошибка Polza.ai API: {error_msg}"
 
-def chunk_text(text, chunk_size=350, overlap=70):
-    """Разбивает текст на чанки"""
-    words = text.split()
-    chunks = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
-        if chunk:
-            chunks.append(chunk)
-    return chunks
+def semantic_chunk_text(text, max_words=400, min_words=40):
+    """Структурная нарезка Markdown-текста.
+    - Делит по заголовкам (#, ##, ###) как естественным границам секций
+    - Внутри секции накапливает абзацы до max_words
+    - Не разрезает абзацы и списки посередине
+    - Мелкие блоки (<min_words) объединяет с предыдущим чанком
+    Возвращает список кортежей (section_heading, chunk_text)
+    """
+    import re
+    heading_re = re.compile(r'^(#{1,3} .+)$', re.MULTILINE)
+
+    # Разбиваем текст на секции [(heading, body), ...]
+    sections = []
+    pos = 0
+    current_heading = ""
+    for m in heading_re.finditer(text):
+        body = text[pos:m.start()].strip()
+        if body or current_heading:
+            sections.append((current_heading, body))
+        current_heading = m.group(0).strip()
+        pos = m.end()
+    tail = text[pos:].strip()
+    if tail or current_heading:
+        sections.append((current_heading, tail))
+    if not sections:
+        sections = [("", text.strip())]
+
+    chunks = []  # list of (heading, text)
+
+    for heading, body in sections:
+        paragraphs = [p.strip() for p in re.split(r'\n{2,}', body) if p.strip()]
+        if not paragraphs:
+            continue
+
+        buf_parts = []
+        buf_words = 0
+
+        for para in paragraphs:
+            pw = len(para.split())
+            # Если добавление абзаца превысит лимит и буфер уже достаточен — сохраняем чанк
+            if buf_words + pw > max_words and buf_words >= min_words:
+                chunks.append((heading, "\n\n".join(buf_parts)))
+                buf_parts = []
+                buf_words = 0
+            buf_parts.append(para)
+            buf_words += pw
+
+        # Остаток секции
+        if buf_parts:
+            chunk_body = "\n\n".join(buf_parts)
+            if buf_words < min_words and chunks:
+                # Слишком мелкий — присоединяем к предыдущему
+                prev_h, prev_t = chunks[-1]
+                chunks[-1] = (prev_h, prev_t + "\n\n" + chunk_body)
+            else:
+                chunks.append((heading, chunk_body))
+
+    return chunks if chunks else [("", text.strip())]
 
 def add_to_qdrant(chunk_id, embedding, text, metadata):
     """Добавляет вектор в Qdrant"""
@@ -822,33 +871,27 @@ def process_and_embed_document(filepath):
         if not text.strip():
             return False, "Файл пустой"
         
-        # Разбиваем на чанки
-        words = text.split()
-        chunks = []
-        chunk_size = 350  # Оптимизировано для формул
-        overlap = 70      # Больший overlap для лучшего покрытия формул
-        
-        for i in range(0, len(words), chunk_size - overlap):
-            chunk = " ".join(words[i:i + chunk_size])
-            if chunk:
-                chunks.append(chunk)
-        
+        # Семантическая нарезка по структуре Markdown
+        chunk_pairs = semantic_chunk_text(text)
+        print(f"[Нарезка] {filename}: {len(chunk_pairs)} чанков (семантическая)")
+
         # Создаем эмбеддинги и загружаем в Qdrant
-        for idx, chunk in enumerate(chunks):
+        for idx, (section_title, chunk_body) in enumerate(chunk_pairs):
+            # Добавляем заголовок секции к тексту чанка (для LLM контекста)
+            full_chunk = f"{section_title}\n\n{chunk_body}" if section_title else chunk_body
             chunk_id = hashlib.md5(f"{filename}_{idx}".encode()).hexdigest()
-            
-            # Получаем эмбеддинг
-            embedding = get_embedding(chunk)
+
+            embedding = get_embedding(full_chunk)
             if not embedding:
                 continue
-            
-            # Добавляем в Qdrant
+
             metadata = {
                 "filename": filename,
                 "chunk_index": idx,
-                "total_chunks": len(chunks)
+                "total_chunks": len(chunk_pairs),
+                "section_title": section_title
             }
-            
+
             requests.put(
                 f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points",
                 json={
@@ -856,15 +899,15 @@ def process_and_embed_document(filepath):
                         "id": chunk_id,
                         "vector": embedding,
                         "payload": {
-                            "text": chunk,
+                            "text": full_chunk,
                             **metadata
                         }
                     }]
                 },
                 timeout=30
             )
-        
-        return True, f"Обработано {len(chunks)} чанков"
+
+        return True, f"Обработано {len(chunk_pairs)} чанков (семантическая нарезка)"
     except Exception as e:
         return False, str(e)
 
