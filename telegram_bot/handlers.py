@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import aiohttp
 import os
@@ -383,7 +384,7 @@ def register_handlers(dp, flask_api_url):
                 async with session.post(
                     f"{flask_api_url}/api/telegram/search",
                     json={'telegram_id': user_id, 'query': text, 'history': history},
-                    timeout=aiohttp.ClientTimeout(total=60)
+                    timeout=aiohttp.ClientTimeout(total=120)
                 ) as response:
                     result = await response.json()
                     
@@ -447,6 +448,10 @@ def register_handlers(dp, flask_api_url):
                     
                     logger.info(f"Голосовой ответ отправлен пользователю {user_id}")
         
+        except asyncio.TimeoutError:
+            await _safe_delete(processing_msg)
+            logger.error("Таймаут голосового запроса к Flask API (>120s)")
+            await message.answer("⏳ Ответ формируется дольше обычного. Попробуйте повторить запрос.")
         except aiohttp.ClientError as e:
             logger.error(f"Ошибка подключения: {e}")
             await _safe_delete(processing_msg)
@@ -488,11 +493,10 @@ def register_handlers(dp, flask_api_url):
                 async with session.post(
                     f"{flask_api_url}/api/telegram/search",
                     json=data,
-                    timeout=aiohttp.ClientTimeout(total=60)
+                    timeout=aiohttp.ClientTimeout(total=120)
                 ) as response:
                     result = await response.json()
                     
-                    # Удаляем сообщение о поиске
                     await _safe_delete(processing_msg)
                     
                     if response.status == 403 or not result.get('authorized'):
@@ -571,6 +575,12 @@ def register_handlers(dp, flask_api_url):
                     
                     logger.info(f"Ответ отправлен пользователю {user_id}")
         
+        except asyncio.TimeoutError:
+            await _safe_delete(processing_msg)
+            logger.error("Таймаут запроса к Flask API (>120s)")
+            await message.answer(
+                "⏳ Ответ формируется дольше обычного. Попробуйте повторить запрос."
+            )
         except aiohttp.ClientError as e:
             await _safe_delete(processing_msg)
             logger.error(f"Ошибка подключения к API: {e}")
@@ -673,7 +683,7 @@ def register_handlers(dp, flask_api_url):
                     async with session.post(
                         f"{flask_api_url}/api/telegram/search",
                         json=data,
-                        timeout=aiohttp.ClientTimeout(total=60)
+                        timeout=aiohttp.ClientTimeout(total=120)
                     ) as response:
                         result = await response.json()
                         
@@ -738,6 +748,10 @@ def register_handlers(dp, flask_api_url):
                         keyboard = InlineKeyboardMarkup(inline_keyboard=inline_buttons) if inline_buttons else None
                         await callback.message.answer(answer, reply_markup=keyboard)
                         
+            except asyncio.TimeoutError:
+                await _safe_delete(processing_msg)
+                logger.error("Таймаут suggestion запроса к Flask API (>120s)")
+                await callback.message.answer("⏳ Ответ формируется дольше обычного. Попробуйте повторить запрос.")
             except Exception as e:
                 await _safe_delete(processing_msg)
                 logger.error(f"Ошибка обработки suggestion: {e}", exc_info=True)
