@@ -696,7 +696,11 @@ def ask_llm(query, context, model="deepseek", channel="telegram"):
             timeout=60  # Уменьшили таймаут, т.к. DeepSeek быстрый
         )
         response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
+        resp_json = response.json()
+        finish_reason = resp_json["choices"][0].get("finish_reason", "unknown")
+        content = resp_json["choices"][0]["message"]["content"]
+        print(f"[LLM] finish_reason={finish_reason} content_len={len(content or '')} sys_len={len(system_prompt)} user_len={len(user_prompt)}")
+        print(f"[LLM] content_preview={repr((content or '')[:150])}")
         if not content or not content.strip():
             print("WARNING: DeepSeek вернул пустой ответ — повторная попытка с temperature=0.3")
             # Повторная попытка с чуть выше temperature
