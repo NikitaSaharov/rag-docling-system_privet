@@ -978,6 +978,12 @@ def telegram_search():
         seen_chunks.add(chunk_key)
         
         text = r["payload"]["text"]
+        # Пропускаем HTML-таблицы (пустые <th></th>) — бесполезны для LLM
+        html_tags = text.count('<th') + text.count('<tr') + text.count('<td')
+        if html_tags > 10:
+            print(f"[CONTEXT] Пропущен HTML-чанк {chunk_idx} ({html_tags} HTML-тегов)", flush=True)
+            continue
+        
         context_entry = f"[Источник: {filename}, чанк {chunk_idx+1}]\n{text}"
         
         if "Справочник" in filename:
@@ -994,7 +1000,7 @@ def telegram_search():
         print(f"[CONTEXT] Обрезан {orig_len} -> {MAX_CONTEXT_CHARS} символов", flush=True)
     else:
         print(f"[CONTEXT] Размер контекста: {orig_len} символов (не обрезан)", flush=True)
-    # DEBUG: dump context size to file
+    # DEBUG: dump context start to file
     with open('/app/debug_context.txt', 'w', encoding='utf-8') as _f:
         _f.write(f'orig_len={orig_len}\nfinal_len={len(context)}\nquery={query_with_context[:100]}\nCONTEXT_START:\n{context[:1000]}\n')
     sources = [{
@@ -1125,6 +1131,9 @@ def search():
         seen_chunks.add(chunk_key)
         
         text = r["payload"]["text"]
+        # Пропускаем HTML-таблицы (пустые <th></th>) — бесполезны для LLM
+        if text.count('<th') + text.count('<tr') + text.count('<td') > 10:
+            continue
         context_entry = f"[Источник: {filename}, чанк {chunk_idx+1}]\n{text}"
         
         if "Справочник" in filename:
