@@ -995,8 +995,8 @@ def telegram_search():
     else:
         print(f"[CONTEXT] Размер контекста: {orig_len} символов (не обрезан)", flush=True)
     # DEBUG: dump context size to file
-    with open('/app/debug_context.txt', 'w') as _f:
-        _f.write(f'orig_len={orig_len}\nfinal_len={len(context)}\nquery={query_with_context[:100]}\n')
+    with open('/app/debug_context.txt', 'w', encoding='utf-8') as _f:
+        _f.write(f'orig_len={orig_len}\nfinal_len={len(context)}\nquery={query_with_context[:100]}\nCONTEXT_START:\n{context[:1000]}\n')
     sources = [{
         'filename': r["payload"]["filename"],
         'text': r["payload"]["text"][:200] + "...",
