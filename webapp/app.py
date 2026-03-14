@@ -986,6 +986,11 @@ def telegram_search():
             other_parts.append(context_entry)
     
     context = "\n\n".join(spravochnik_parts + other_parts)
+    # Ограничиваем контекст: при > 60К символов DeepSeek возвращает пустой ответ
+    MAX_CONTEXT_CHARS = 60000
+    if len(context) > MAX_CONTEXT_CHARS:
+        context = context[:MAX_CONTEXT_CHARS]
+        print(f"[CONTEXT] Обрезан до {MAX_CONTEXT_CHARS} символов")
     sources = [{
         'filename': r["payload"]["filename"],
         'text': r["payload"]["text"][:200] + "...",
@@ -1123,6 +1128,11 @@ def search():
     
     # Справочник в начале, остальные - потом
     context = "\n\n".join(spravochnik_parts + other_parts)
+    # Ограничиваем контекст: при > 60К символов DeepSeek возвращает пустой ответ
+    MAX_CONTEXT_CHARS = 60000
+    if len(context) > MAX_CONTEXT_CHARS:
+        context = context[:MAX_CONTEXT_CHARS]
+        print(f"[CONTEXT] Обрезан до {MAX_CONTEXT_CHARS} символов")
     sources = [{
         'filename': r["payload"]["filename"],
         'text': r["payload"]["text"][:200] + "...",
