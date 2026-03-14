@@ -84,7 +84,8 @@ DEEPSEEK_MODEL = "deepseek-chat"
 # Embedding API (тот же Polza.ai, OpenAI-compatible)
 EMBEDDING_API_URL = os.getenv('EMBEDDING_API_URL', 'https://api.polza.ai/v1')
 EMBEDDING_API_KEY = os.getenv('EMBEDDING_API_KEY', '') or os.getenv('POLZA_API_KEY', '')
-EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
+EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'baai/bge-m3')
+EMBEDDING_VECTOR_SIZE = int(os.getenv('EMBEDDING_VECTOR_SIZE', '1024'))
 
 # Speech-to-Text (Polza.ai)
 POLZA_STT_API_KEY = os.getenv('POLZA_STT_API_KEY', '')
@@ -116,6 +117,23 @@ def get_embedding(text, model=None):
     except Exception as e:
         print(f"Ошибка получения эмбеддинга: {e}")
         return None
+
+def ensure_collection():
+    """Создаёт Qdrant коллекцию с правильной размерностью если её нет"""
+    try:
+        check = requests.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", timeout=5)
+        if check.status_code == 200:
+            return
+        response = requests.put(
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}",
+            json={"vectors": {"size": EMBEDDING_VECTOR_SIZE, "distance": "Cosine"}},
+            timeout=10
+        )
+        response.raise_for_status()
+        print(f"✅ Qdrant коллекция '{COLLECTION_NAME}' создана (size={EMBEDDING_VECTOR_SIZE})")
+    except Exception as e:
+        print(f"Ошибка создания коллекции: {e}")
+
 
 def search_documents(query, limit=50):
     """Гибридный поиск: semantic + keyword matching + boosting"""
@@ -769,6 +787,7 @@ def add_to_qdrant(chunk_id, embedding, text, metadata):
 def process_and_embed_document(filepath):
     """Обрабатывает документ и создает эмбеддинги"""
     try:
+        ensure_collection()
         filename = Path(filepath).name
         file_ext = Path(filepath).suffix.lower()
         
