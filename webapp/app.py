@@ -696,11 +696,7 @@ def ask_llm(query, context, model="deepseek", channel="telegram"):
             timeout=60  # Уменьшили таймаут, т.к. DeepSeek быстрый
         )
         response.raise_for_status()
-        resp_json = response.json()
-        finish_reason = resp_json["choices"][0].get("finish_reason", "unknown")
-        content = resp_json["choices"][0]["message"]["content"]
-        print(f"[LLM] finish_reason={finish_reason} content_len={len(content or '')} sys_len={len(system_prompt)} user_len={len(user_prompt)}")
-        print(f"[LLM] content_preview={repr((content or '')[:150])}")
+        content = response.json()["choices"][0]["message"]["content"]
         if not content or not content.strip():
             print("WARNING: DeepSeek вернул пустой ответ — повторная попытка с temperature=0.3")
             # Повторная попытка с чуть выше temperature
@@ -963,7 +959,6 @@ def telegram_search():
         })
     
     # Формируем контекст
-    print(f"[DEBUG] results (top 5): {[(r['payload']['chunk_index'], round(r['score'],3)) for r in results[:5]]}", flush=True)
     expanded_results = expand_context_around_chunks(results, window=1)
     spravochnik_parts = []
     other_parts = []
@@ -1001,16 +996,6 @@ def telegram_search():
         print(f"[CONTEXT] Обрезан {orig_len} -> {MAX_CONTEXT_CHARS} символов", flush=True)
     else:
         print(f"[CONTEXT] Размер контекста: {orig_len} символов (не обрезан)", flush=True)
-    # DEBUG: dump context info to file
-    with open('/app/debug_context.txt', 'w', encoding='utf-8') as _f:
-        _f.write(f'orig_len={orig_len}\nfinal_len={len(context)}\nquery={query_with_context[:100]}\n')
-        _f.write('TOP CHUNKS IN EXPANDED (with scores):\n')
-        for _r in expanded_results[:20]:
-            _idx = _r['payload']['chunk_index']
-            _sc = _r.get('score', 0)
-            _txt = _r['payload']['text']
-            _html = _txt.count('<th') + _txt.count('<tr') + _txt.count('<td')
-            _f.write(f'  chunk={_idx} score={_sc:.3f} html={_html} preview={repr(_txt[:60])}\n')
     sources = [{
         'filename': r["payload"]["filename"],
         'text': r["payload"]["text"][:200] + "...",
