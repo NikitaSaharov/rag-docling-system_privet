@@ -583,8 +583,7 @@ def register_handlers(dp, flask_api_url):
                         answer,  # Полный ответ с [SUGGESTIONS]
                         reply_markup=keyboard
                     )
-                    )
-                    
+
                     logger.info(f"Ответ отправлен пользователю {user_id}")
         
         except asyncio.TimeoutError:
