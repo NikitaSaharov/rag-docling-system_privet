@@ -858,7 +858,7 @@ def rewrite_query_if_needed(query: str, history: list) -> str:
     return query
 
 
-def add_to_qdrant
+def add_to_qdrant(chunk_id, embedding, text, metadata):
     """Добавляет вектор в Qdrant"""
     try:
         response = requests.put(
