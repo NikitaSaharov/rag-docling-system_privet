@@ -1871,44 +1871,46 @@
                 content.appendChild(sourcesDiv);
             }
             
-            // Кнопки обратной связи (4A)
-            const feedbackRow = document.createElement('div');
-            feedbackRow.className = 'feedback-row';
+            // Кнопки обратной связи (4A) — только для сообщений ассистента
+            if (type === 'assistant') {
+                const feedbackRow = document.createElement('div');
+                feedbackRow.className = 'feedback-row';
 
-            const currentQuery = chatHistory.length > 0 ? chatHistory[chatHistory.length - 1]?.question || '' : '';
-            const currentAnswer = cleanText;
+                const currentQuery = chatHistory.length > 0 ? chatHistory[chatHistory.length - 1]?.question || '' : '';
+                const currentAnswer = cleanText;
 
-            ['good', 'bad'].forEach(rating => {
-                const btn = document.createElement('button');
-                btn.className = 'feedback-btn';
-                btn.textContent = rating === 'good' ? '\uD83D\uDC4D' : '\uD83D\uDC4E';
-                btn.title = rating === 'good' ? 'Полезно' : 'Не полезно';
-                btn.onclick = async () => {
-                    // Блокируем обе кнопки
-                    feedbackRow.querySelectorAll('.feedback-btn').forEach(b => b.disabled = true);
-                    btn.classList.add(rating === 'good' ? 'selected-good' : 'selected-bad');
-                    btn.textContent = rating === 'good' ? '\uD83D\uDC4D \u2713' : '\uD83D\uDC4E \u2713';
+                ['good', 'bad'].forEach(rating => {
+                    const btn = document.createElement('button');
+                    btn.className = 'feedback-btn';
+                    btn.textContent = rating === 'good' ? '\uD83D\uDC4D' : '\uD83D\uDC4E';
+                    btn.title = rating === 'good' ? 'Полезно' : 'Не полезно';
+                    btn.onclick = async () => {
+                        // Блокируем обе кнопки
+                        feedbackRow.querySelectorAll('.feedback-btn').forEach(b => b.disabled = true);
+                        btn.classList.add(rating === 'good' ? 'selected-good' : 'selected-bad');
+                        btn.textContent = rating === 'good' ? '\uD83D\uDC4D \u2713' : '\uD83D\uDC4E \u2713';
 
-                    try {
-                        await fetch('/api/feedback', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
-                            },
-                            body: JSON.stringify({
-                                rating,
-                                channel: 'web',
-                                query: currentQuery,
-                                answer: currentAnswer
-                            })
-                        });
-                    } catch(e) { /* тихо игнорируем */ }
-                };
-                feedbackRow.appendChild(btn);
-            });
+                        try {
+                            await fetch('/api/feedback', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                                },
+                                body: JSON.stringify({
+                                    rating,
+                                    channel: 'web',
+                                    query: currentQuery,
+                                    answer: currentAnswer
+                                })
+                            });
+                        } catch(e) { /* тихо игнорируем */ }
+                    };
+                    feedbackRow.appendChild(btn);
+                });
 
-            content.appendChild(feedbackRow);
+                content.appendChild(feedbackRow);
+            }
 
             // Добавляем suggestions
             if (suggestions && suggestions.length > 0) {
