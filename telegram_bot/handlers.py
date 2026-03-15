@@ -546,10 +546,9 @@ def register_handlers(dp, flask_api_url):
                     # Сохраняем suggestions в кэше
                     if suggestions:
                         suggestions_cache[user_id] = suggestions
-                    
-                    # Создаём комбинированную inline-клавиатуру
+                    # Создаем комбинированную inline-клавиатуру
                     inline_buttons = []
-                    
+
                     # Добавляем кнопку источников
                     if sources:
                         inline_buttons.append([
@@ -558,7 +557,7 @@ def register_handlers(dp, flask_api_url):
                                 callback_data=f"show_sources:{message_id}"
                             )
                         ])
-                    
+
                     # Добавляем кнопки suggestions (только номера)
                     if suggestions:
                         suggestion_row = []
@@ -570,12 +569,20 @@ def register_handlers(dp, flask_api_url):
                                 )
                             )
                         inline_buttons.append(suggestion_row)
-                    
+
+                    # 4A: кнопки обратной связи
+                    inline_buttons.append([
+                        InlineKeyboardButton(text="👍", callback_data=f"feedback:good:{message_id}"),
+                        InlineKeyboardButton(text="👎", callback_data=f"feedback:bad:{message_id}"),
+                    ])
+                    feedback_cache[f"{user_id}_{message_id}"] = {'query': query, 'answer': answer, 'telegram_id': user_id}
+
                     # Отправляем ответ с клавиатурой
                     keyboard = InlineKeyboardMarkup(inline_keyboard=inline_buttons) if inline_buttons else None
                     await message.answer(
                         answer,  # Полный ответ с [SUGGESTIONS]
                         reply_markup=keyboard
+                    )
                     )
                     
                     logger.info(f"Ответ отправлен пользователю {user_id}")
@@ -750,9 +757,16 @@ def register_handlers(dp, flask_api_url):
                                 )
                             inline_buttons.append(suggestion_row)
                         
+                        # 4A: кнопки обратной связи
+                        inline_buttons.append([
+                            InlineKeyboardButton(text="👍", callback_data=f"feedback:good:{message_id}"),
+                            InlineKeyboardButton(text="👎", callback_data=f"feedback:bad:{message_id}"),
+                        ])
+                        feedback_cache[f"{user_id}_{message_id}"] = {'query': selected_query, 'answer': answer, 'telegram_id': user_id}
+
                         keyboard = InlineKeyboardMarkup(inline_keyboard=inline_buttons) if inline_buttons else None
                         await callback.message.answer(answer, reply_markup=keyboard)
-                        
+
             except asyncio.TimeoutError:
                 await _safe_delete(processing_msg)
                 logger.error("Таймаут suggestion запроса к Flask API (>120s)")
@@ -766,6 +780,58 @@ def register_handlers(dp, flask_api_url):
             logger.error(f"Ошибка suggestion callback: {e}")
             await callback.answer("Ошибка", show_alert=True)
     
+    @router.callback_query(F.data.startswith("feedback:"))
+    async def feedback_callback(callback: CallbackQuery):
+        """4A: Обработчик кнопок 👍 / 👎"""
+        user_id = callback.from_user.id
+        try:
+            parts = callback.data.split(":")
+            # формат: feedback:good:12345  или  feedback:bad:12345
+            rating  = parts[1]   # good | bad
+            msg_id  = parts[2]
+            cache_key = f"{user_id}_{msg_id}"
+
+            cached = feedback_cache.get(cache_key)
+
+            # Отправляем в Flask асинхронно
+            async with aiohttp.ClientSession() as session:
+                await session.post(
+                    f"{flask_api_url}/api/feedback",
+                    json={
+                        'rating':      rating,
+                        'channel':     'telegram',
+                        'query':       cached.get('query', '') if cached else '',
+                        'answer':      cached.get('answer', '') if cached else '',
+                        'telegram_id': user_id,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=5)
+                )
+
+            # Обновляем клавиатуру: убираем ряд оценки, показываем выбранное
+            label = "👍 Спасибо!" if rating == 'good' else "👎 Понял, будем стараться"
+            await callback.answer(label, show_alert=False)
+
+            # Убираем ряд оценки из инлайн-клавиатуры, чтобы нельзя проголосовать дважды
+            try:
+                old_markup = callback.message.reply_markup
+                if old_markup:
+                    new_rows = [
+                        row for row in old_markup.inline_keyboard
+                        if not any(btn.callback_data.startswith('feedback:') for btn in row)
+                    ]
+                    new_markup = InlineKeyboardMarkup(inline_keyboard=new_rows) if new_rows else None
+                    await callback.message.edit_reply_markup(reply_markup=new_markup)
+            except Exception:
+                pass
+
+            # Удаляем из кэша чтобы не голосовать дважды
+            feedback_cache.pop(cache_key, None)
+            logger.info(f"[Feedback] TG user {user_id}: {rating}")
+
+        except Exception as e:
+            logger.error(f"Ошибка feedback callback: {e}")
+            await callback.answer("Ошибка", show_alert=True)
+
     # Регистрируем router
     dp.include_router(router)
     logger.info("Обработчики зарегистрированы")

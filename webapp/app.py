@@ -1144,6 +1144,42 @@ def telegram_search():
         'authorized': True
     })
 
+@app.route('/api/feedback', methods=['POST'])
+def save_feedback():
+    """4A: Сохраняет оценку ответа (у веб — под JWT, у TG — по telegram_id)"""
+    data = request.json or {}
+    rating = data.get('rating', '').strip()
+    if rating not in ('good', 'bad'):
+        return jsonify({'error': 'rating must be good or bad'}), 400
+
+    channel = data.get('channel', 'web')
+    query   = data.get('query', '')[:500]
+    answer  = data.get('answer', '')[:500]
+
+    # Опционально: user_id через JWT (web) или telegram_id (TG)
+    user_id = None
+    if channel == 'web':
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if token:
+            try:
+                import jwt as pyjwt
+                secret = os.getenv('FLASK_SECRET_KEY', app.secret_key)
+                payload = pyjwt.decode(token, secret, algorithms=['HS256'])
+                user_id = payload.get('user_id')
+            except Exception:
+                pass
+    elif channel == 'telegram':
+        tg_id = data.get('telegram_id')
+        if tg_id:
+            user = db.get_user_by_telegram_id(tg_id)
+            if user:
+                user_id = user['id']
+
+    feedback_id = db.save_feedback(rating, channel, query, answer, user_id)
+    print(f"[Feedback] {channel} | {rating} | query={query[:60]}")
+    return jsonify({'success': True, 'id': feedback_id})
+
+
 @app.route('/api/telegram/link_phone', methods=['POST'])
 def telegram_link_phone():
     """Привязка номера телефона к Telegram ID"""

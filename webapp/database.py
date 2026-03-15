@@ -104,6 +104,19 @@ def init_db():
         )
     ''')
     
+    # Таблица обратной связи (фаза 4A)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS answer_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rating TEXT NOT NULL,
+            channel TEXT NOT NULL DEFAULT 'web',
+            query TEXT,
+            answer TEXT,
+            user_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # Индексы для оптимизации
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone_number)')
@@ -870,6 +883,46 @@ def reject_access_request(request_id, admin_username='admin'):
         conn.close()
         print(f"Ошибка отклонения запроса: {e}")
         return False, None
+
+# ===================== Feedback Functions (4A) =====================
+
+def save_feedback(rating, channel, query=None, answer=None, user_id=None):
+    """Сохраняет оценку ответа от пользователя (4A: обратная связь)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO answer_feedback (rating, channel, query, answer, user_id)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (rating, channel, query, answer[:500] if answer else None, user_id))
+    conn.commit()
+    feedback_id = cursor.lastrowid
+    conn.close()
+    return feedback_id
+
+def get_feedback_stats():
+    """Статистика обратной связи для админ-панели"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN rating = 'good' THEN 1 ELSE 0 END) as good,
+            SUM(CASE WHEN rating = 'bad'  THEN 1 ELSE 0 END) as bad,
+            ROUND(100.0 * SUM(CASE WHEN rating = 'good' THEN 1 ELSE 0 END) / MAX(COUNT(*), 1), 1) as good_pct
+        FROM answer_feedback
+    ''')
+    row = cursor.fetchone()
+    stats = dict(row) if row else {'total': 0, 'good': 0, 'bad': 0, 'good_pct': 0.0}
+
+    cursor.execute('''
+        SELECT rating, channel, query, created_at
+        FROM answer_feedback
+        ORDER BY created_at DESC
+        LIMIT 20
+    ''')
+    recent = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {'stats': stats, 'recent': recent}
 
 if __name__ == '__main__':
     # Тест базы данных

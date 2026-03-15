@@ -325,6 +325,49 @@
         .suggestion-btn:active {
             transform: translateX(2px);
         }
+
+        /* Feedback buttons (4A) */
+        .feedback-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .feedback-btn {
+            padding: 4px 10px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .feedback-btn:hover:not(:disabled) {
+            border-color: var(--primary-gold);
+            color: var(--text-dark);
+            background: rgba(185, 255, 102, 0.08);
+        }
+
+        .feedback-btn:disabled {
+            cursor: default;
+            opacity: 0.5;
+        }
+
+        .feedback-btn.selected-good {
+            border-color: #22c55e;
+            color: #16a34a;
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .feedback-btn.selected-bad {
+            border-color: #ef4444;
+            color: #dc2626;
+            background: rgba(239, 68, 68, 0.08);
+        }
         
         .input-container {
             padding: 16px 24px;
@@ -1828,6 +1871,45 @@
                 content.appendChild(sourcesDiv);
             }
             
+            // Кнопки обратной связи (4A)
+            const feedbackRow = document.createElement('div');
+            feedbackRow.className = 'feedback-row';
+
+            const currentQuery = chatHistory.length > 0 ? chatHistory[chatHistory.length - 1]?.question || '' : '';
+            const currentAnswer = cleanText;
+
+            ['good', 'bad'].forEach(rating => {
+                const btn = document.createElement('button');
+                btn.className = 'feedback-btn';
+                btn.textContent = rating === 'good' ? '\uD83D\uDC4D' : '\uD83D\uDC4E';
+                btn.title = rating === 'good' ? 'Полезно' : 'Не полезно';
+                btn.onclick = async () => {
+                    // Блокируем обе кнопки
+                    feedbackRow.querySelectorAll('.feedback-btn').forEach(b => b.disabled = true);
+                    btn.classList.add(rating === 'good' ? 'selected-good' : 'selected-bad');
+                    btn.textContent = rating === 'good' ? '\uD83D\uDC4D \u2713' : '\uD83D\uDC4E \u2713';
+
+                    try {
+                        await fetch('/api/feedback', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                            },
+                            body: JSON.stringify({
+                                rating,
+                                channel: 'web',
+                                query: currentQuery,
+                                answer: currentAnswer
+                            })
+                        });
+                    } catch(e) { /* тихо игнорируем */ }
+                };
+                feedbackRow.appendChild(btn);
+            });
+
+            content.appendChild(feedbackRow);
+
             // Добавляем suggestions
             if (suggestions && suggestions.length > 0) {
                 const suggestionsDiv = document.createElement('div');
