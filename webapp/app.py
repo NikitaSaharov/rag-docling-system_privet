@@ -867,6 +867,72 @@ def rewrite_query_if_needed(query: str, history: list) -> str:
     return query
 
 
+def analyze_query_intent(query: str) -> str:
+    """1E: Обрабатывает запросы с отрицанием для корректного поиска в Qdrant.
+    Проблема: вектор 'не стоит сокращать расходы' ≈ 'сокращать расходы' — модель отрицание не понимает.
+    Решение: DeepSeek извлекает ТЕМУ запроса и формирует поисковый запрос без отрицания.
+    Пример: 'Почему не стоит сокращать расходы на материалы?'
+             → 'влияние сокращения расходов на материалы на качество лечения последствия'
+    ВАЖНО: оригинальный запрос пользователя всё равно идёт в LLM без изменений.
+    """
+    import re
+
+    # Паттерны грамматического отрицания и запросов об ошибках/рисках
+    # Не трогаем нейтральные запросы — только явное отрицание действия
+    _NEGATION_RE = re.compile(
+        r'\bне\s+стоит\b'
+        r'|\bнельзя\b'
+        r'|\bне\s+надо\b'
+        r'|\bне\s+нужно\b'
+        r'|\bне\s+следует\b'
+        r'|\bне\s+рекоменд'
+        r'|\bпочему\s+не\b'
+        r'|\bкак\s+не\s+допустить\b'
+        r'|\bкак\s+избежать\b'
+        r'|\bошибк[иа]\s+при\b'
+        r'|\bзачем\s+не\b',
+        re.IGNORECASE
+    )
+
+    if not _NEGATION_RE.search(query):
+        return query  # Нет отрицания — LLM вызов не нужен
+
+    prompt = (
+        f'Пользователь задал вопрос: "{query}"\n\n'
+        'Вопрос содержит отрицание или запрос об ошибках/рисках.\n'
+        'Задача: сформулируй поисковый запрос для базы знаний стоматологической клиники, '
+        'который найдёт документы по ТЕМЕ этого вопроса.\n'
+        'Запрос должен быть без отрицания — просто о теме, чтобы найти документы где она обсуждается.\n\n'
+        'Примеры:\n'
+        '- "Почему не стоит сокращать расходы на материалы?" → "расходы на материалы влияние на качество последствия снижения"\n'
+        '- "Нельзя ли снижать нормочас?" → "нормочас снижение последствия риски"\n'
+        '- "Как не допустить перегрузку докторов?" → "загрузка докторов норма контроль"\n'
+        '- "Ошибки при расчёте коэффициента загрузки?" → "расчёт коэффициента загрузки методика"\n\n'
+        'Ответь ТОЛЬКО текстом поискового запроса, без кавычек и пояснений.'
+    )
+
+    try:
+        resp = requests.post(
+            POLZA_URL,
+            headers={"Authorization": f"Bearer {POLZA_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": DEEPSEEK_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.0,
+                "max_tokens": 80,
+            },
+            timeout=10,
+        )
+        search_q = resp.json()["choices"][0]["message"]["content"].strip()
+        if search_q:
+            print(f"[Intent] negation detected: '{query}' → search: '{search_q}'")
+            return search_q
+    except Exception as e:
+        print(f"[Intent] Ошибка: {e}")
+
+    return query
+
+
 def add_to_qdrant(chunk_id, embedding, text, metadata):
     """Добавляет вектор в Qdrant"""
     try:
@@ -1069,6 +1135,9 @@ def telegram_search():
     else:
         query_with_context = query
 
+    # 1E: обработка отрицаний для корректного поиска
+    search_query = analyze_query_intent(search_query)
+
     # Поиск документов
     results = search_documents(search_query, limit=15)
 
@@ -1257,6 +1326,9 @@ def search():
         search_query = rewrite_query_if_needed(query, history)
     else:
         query_with_context = query
+
+    # 1E: обработка отрицаний для корректного поиска
+    search_query = analyze_query_intent(search_query)
 
     # Поиск документов - увеличено для лучшего поиска формул
     results = search_documents(search_query, limit=15)
