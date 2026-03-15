@@ -161,6 +161,7 @@ def search_documents(query, limit=50):
         # 2. Re-ranking: boost scores
         import re
         for result in results:
+            result['raw_score'] = result['score']  # 1D: сохраняем cosine score до бустинга
             filename = result["payload"]["filename"]
             total_chunks = result["payload"]["total_chunks"]
             text = result["payload"]["text"]
@@ -408,7 +409,7 @@ def expand_context_around_chunks(results, window=1):
     expanded.sort(key=lambda x: x["score"], reverse=True)
     return expanded
 
-def ask_llm(query, context, model="deepseek", channel="telegram"):
+def ask_llm(query, context, model="deepseek", channel="telegram", confidence_score=None):
     """Генерирует ответ с помощью LLM + few-shot examples"""
     
     # Загружаем примеры вопрос-ответ для few-shot learning
@@ -692,7 +693,16 @@ def ask_llm(query, context, model="deepseek", channel="telegram"):
 
 Если в контексте есть информация - используй её для ответа на ВОПРОС ПОЛЬЗОВАТЕЛЯ
 Если информации нет - скажи: "На данный момент у меня недостаточно информации" и предложи переформулировки"""
-    
+
+    # 1D: предупреждаем LLM не домысливать при низком cosine score
+    if confidence_score is not None and confidence_score < 0.65:
+        user_prompt += (
+            f"\n\nВАЖНО: Поиск вернул фрагменты с низкой релевантностью "
+            f"(cosine score={confidence_score:.2f}). "
+            "Если фрагменты не содержат чёткого ответа — "
+            "честно признай это и предложи 3-4 переформулировки вместо домысливания."
+        )
+
     try:
         # Используем ТОЛЬКО DeepSeek через Polza.ai
         response = requests.post(
@@ -810,7 +820,45 @@ def semantic_chunk_text(text, max_words=400, min_words=40):
 
     return chunks if chunks else [("", text.strip())]
 
-def add_to_qdrant(chunk_id, embedding, text, metadata):
+
+def rewrite_query_if_needed(query: str, history: list) -> str:
+    """1C: Если запрос короткий и есть история — LLM разворачивает его в полный поисковый запрос.
+    Пример: 'А какая норма?' → 'Какая нормативная загрузка стоматологического кресла?'
+    """
+    if not history or len(query.split()) > 7:
+        return query
+
+    last_qa = history[-1]
+    prompt = (
+        f"Предыдущий вопрос пользователя: {last_qa.get('question', '')}\n"
+        f"Ответ системы (начало): {last_qa.get('answer', '')[:200]}\n\n"
+        f"Пользователь написал короткий уточняющий вопрос: \"{query}\"\n\n"
+        "Перепиши его как полноценный самостоятельный поисковый запрос "
+        "для базы знаний стоматологической клиники. "
+        "Ответь ТОЛЬКО текстом переписанного запроса, без кавычек и пояснений."
+    )
+    try:
+        resp = requests.post(
+            POLZA_URL,
+            headers={"Authorization": f"Bearer {POLZA_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": DEEPSEEK_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.0,
+                "max_tokens": 80,
+            },
+            timeout=10,
+        )
+        rewritten = resp.json()["choices"][0]["message"]["content"].strip()
+        if rewritten and len(rewritten.split()) > len(query.split()):
+            print(f"[Query rewrite] '{query}' -> '{rewritten}'")
+            return rewritten
+    except Exception as e:
+        print(f"[Query rewrite] Ошибка: {e}")
+    return query
+
+
+def add_to_qdrant
     """Добавляет вектор в Qdrant"""
     try:
         response = requests.put(
@@ -1007,19 +1055,25 @@ def telegram_search():
     elif history:
         last_qa = history[-1]
         query_with_context = f"Предыдущий вопрос: {last_qa['question']}\nПредыдущий ответ: {last_qa['answer'][:300]}...\n\nТекущий вопрос: {query}"
+        # 1C: переписываем короткий follow-up для точного поиска в Qdrant
+        search_query = rewrite_query_if_needed(query, history)
     else:
         query_with_context = query
-    
+
     # Поиск документов
     results = search_documents(search_query, limit=15)
-    
+
+    # 1D: уверенность по raw cosine score (до бустинга)
+    best_raw_score = max((r.get('raw_score', r['score']) for r in results), default=0.0) if results else 0.0
+    print(f"[Confidence] best_raw_score={best_raw_score:.3f}")
+
     if not results:
         return jsonify({
             'answer': 'Не найдено релевантных документов',
             'sources': [],
             'authorized': True
         })
-    
+
     # Формируем контекст
     expanded_results = expand_context_around_chunks(results, window=1)
     spravochnik_parts = []
@@ -1065,8 +1119,8 @@ def telegram_search():
     } for r in results]
     
     # Генерируем ответ
-    answer = ask_llm(query_with_context, context)
-    
+    answer = ask_llm(query_with_context, context, confidence_score=best_raw_score)
+
     # Сохраняем в историю чата (сессии + сообщения)
     try:
         # Получаем или создаем сессию
@@ -1154,12 +1208,18 @@ def search():
     elif history:
         last_qa = history[-1]
         query_with_context = f"Предыдущий вопрос: {last_qa['question']}\nПредыдущий ответ: {last_qa['answer'][:300]}...\n\nТекущий вопрос: {query}"
+        # 1C: переписываем короткий follow-up для точного поиска в Qdrant
+        search_query = rewrite_query_if_needed(query, history)
     else:
         query_with_context = query
-    
+
     # Поиск документов - увеличено для лучшего поиска формул
     results = search_documents(search_query, limit=15)
-    
+
+    # 1D: уверенность по raw cosine score (до бустинга)
+    best_raw_score = max((r.get('raw_score', r['score']) for r in results), default=0.0) if results else 0.0
+    print(f"[Confidence] best_raw_score={best_raw_score:.3f}")
+
     if not results:
         return jsonify({
             'answer': 'Не найдено релевантных документов',
@@ -1210,7 +1270,7 @@ def search():
     } for r in results]
     
     # Генерируем ответ с учетом истории (web — с таблицами)
-    answer = ask_llm(query_with_context, context, channel="web")
+    answer = ask_llm(query_with_context, context, channel="web", confidence_score=best_raw_score)
     
     # Сохраняем в историю чата
     try:
