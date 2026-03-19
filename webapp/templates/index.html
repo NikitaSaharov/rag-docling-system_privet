@@ -1040,6 +1040,35 @@
             display: none; /* Скрыт на десктопе */
         }
         
+        /* Site Footer */
+        .site-footer {
+            flex-shrink: 0;
+            background: var(--text-dark);
+            color: rgba(255,255,255,0.45);
+            padding: 0 24px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            gap: 12px;
+        }
+        .site-footer-company { white-space: nowrap; }
+        .site-footer-links { display: flex; gap: 16px; flex-wrap: nowrap; }
+        .site-footer-links a {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+        .site-footer-links a:hover { color: var(--primary-gold); }
+
+        @media (max-width: 768px) {
+            .site-footer { flex-direction: column; height: auto; padding: 8px 12px; gap: 6px; }
+            .site-footer-links { gap: 10px; flex-wrap: wrap; justify-content: center; }
+            .site-footer-company { text-align: center; }
+        }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .burger-menu {
@@ -1375,9 +1404,20 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="site-footer-company">ООО «Глобал Дент Университет» &middot; ИНН 7453346120</div>
+        <nav class="site-footer-links">
+            <a href="/docs/oferta" target="_blank">Публичная оферта</a>
+            <a href="/docs/privacy" target="_blank">Политика конфиденциальности</a>
+            <a href="/docs/consent-data" target="_blank">Согласие на ОПД</a>
+            <a href="/docs/consent-newsletter" target="_blank">Согласие на рассылку</a>
+        </nav>
+    </footer>
+
     <script>
-        // Fix mobile viewport height (browser chrome compensation)
+        // Fix mobile viewport height
         function setVH() {
             const vh = window.visualViewport
                 ? window.visualViewport.height * 0.01
