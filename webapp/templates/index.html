@@ -955,6 +955,32 @@
             cursor: not-allowed;
         }
         
+        /* Consent checkbox */
+        .form-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            user-select: none;
+        }
+        .form-checkbox input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+            accent-color: var(--text-dark);
+            cursor: pointer;
+        }
+        .form-checkbox a {
+            color: var(--text-dark);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .form-checkbox a:hover { opacity: 0.7; }
+
         .modal-btn-secondary {
             background: transparent;
             color: var(--text-secondary);
@@ -1260,9 +1286,15 @@
                     <label class="form-label">Пароль</label>
                     <input type="password" id="registerPassword" class="form-input" required minlength="6">
                 </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="registerConsent">
+                        <span>Я принимаю <a href="/docs/oferta" target="_blank">Публичную оферту</a> и <a href="/docs/privacy" target="_blank">Политику конфиденциальности</a></span>
+                    </label>
+                </div>
             </form>
             <div class="modal-footer">
-                <button type="submit" form="registerForm" class="modal-btn modal-btn-primary">Зарегистрироваться</button>
+                <button type="submit" form="registerForm" id="registerSubmitBtn" class="modal-btn modal-btn-primary" disabled>Зарегистрироваться</button>
                 <div class="modal-link" id="showLoginFromRegister">Уже есть аккаунт? Войти</div>
             </div>
         </div>

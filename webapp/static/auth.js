@@ -121,6 +121,15 @@ function setupModalHandlers() {
     document.getElementById('verifyResetCodeForm')?.addEventListener('submit', handleVerifyResetCode);
     document.getElementById('resetPasswordForm')?.addEventListener('submit', handleResetPassword);
     
+    // Consent checkbox — toggles submit button
+    const consentBox = document.getElementById('registerConsent');
+    const registerBtn = document.getElementById('registerSubmitBtn');
+    if (consentBox && registerBtn) {
+        consentBox.addEventListener('change', () => {
+            registerBtn.disabled = !consentBox.checked;
+        });
+    }
+
     // Logout
     document.getElementById('sidebarLogoutBtn')?.addEventListener('click', logout);
 }
@@ -241,7 +250,13 @@ async function handleRegister(e) {
     const email = document.getElementById('registerEmail').value;
     const password = document.getElementById('registerPassword').value;
     const username = document.getElementById('registerUsername').value;
-    
+    const consent = document.getElementById('registerConsent')?.checked;
+
+    if (!consent) {
+        showModalError('registerModal', 'Пожалуйста, примите условия перед регистрацией');
+        return;
+    }
+
     try {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
