@@ -119,12 +119,9 @@
         /* Document content */
         .doc-content {
             font-size: 14px;
-            line-height: 1.75;
+            line-height: 1.8;
             color: #374151;
-        }
-
-        .doc-content p {
-            margin-bottom: 10px;
+            white-space: pre-line;
         }
 
         /* Footer */
@@ -173,11 +170,7 @@
             <h1 class="doc-title">{{ title }}</h1>
             {% if subtitle %}<p class="doc-subtitle">{{ subtitle }}</p>{% endif %}
             <hr class="doc-divider">
-            <div class="doc-content">
-                {% for line in content.split('\n') %}
-                    {% if line.strip() %}<p>{{ line | e }}</p>{% endif %}
-                {% endfor %}
-            </div>
+            <div class="doc-content">{{ content | e }}</div>
         </div>
     </main>
 
