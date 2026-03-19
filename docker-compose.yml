@@ -98,7 +98,7 @@ services:
       - ./shared/db:/db  # SQLite база данных
     env_file:
       - .env.local
-    command: bash -c "pip install -r requirements.txt && python app.py"
+    command: bash -c "pip install -r requirements.txt && gunicorn --workers 2 --threads 4 --worker-class gthread --timeout 120 --bind 0.0.0.0:5000 app:app"
     networks:
       - docling-network
     depends_on:
