@@ -54,6 +54,16 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
 import re as _re
 
+def _clean_llm_response(text: str) -> str:
+    """Strip markdown heading markers that LLM sometimes adds despite the system prompt."""
+    # '### Заголовок' -> 'Заголовок', '## ...' -> '...', '# ...' -> '...'
+    text = _re.sub(r'^#{1,6}\s+', '', text, flags=_re.MULTILINE)
+    # Remove lone '---' dividers that sometimes appear
+    text = _re.sub(r'^---+\s*$', '', text, flags=_re.MULTILINE)
+    # Collapse 3+ consecutive blank lines to 2
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 # === Детекция "demand" сообщений ("Ответь!", "Дай ответ" и т.п.) ===
 _DEMAND_PATTERNS = [
     r'^\s*отв[её]ть',                 # ответь / ответь!
@@ -759,7 +769,7 @@ def ask_llm(query, context, model="deepseek", channel="telegram", confidence_sco
             content = retry_response.json()["choices"][0]["message"]["content"]
         if not content or not content.strip():
             return "На данный момент у меня недостаточно информации для ответа на этот вопрос. Попробуйте переформулировать запрос."
-        return content
+        return _clean_llm_response(content)
     except Exception as e:
         # Возвращаем понятную ошибку без fallback на Ollama
         error_msg = str(e)
