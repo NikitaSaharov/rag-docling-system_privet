@@ -1090,10 +1090,48 @@
         }
         .site-footer-links a:hover { color: var(--primary-gold); }
 
+        /* Mobile footer: collapsible */
         @media (max-width: 768px) {
-            .site-footer { flex-direction: column; height: auto; padding: 8px 12px; gap: 6px; }
-            .site-footer-links { gap: 10px; flex-wrap: wrap; justify-content: center; }
-            .site-footer-company { text-align: center; }
+            .site-footer {
+                flex-direction: column;
+                height: auto;
+                padding: 0;
+                gap: 0;
+                cursor: pointer;
+            }
+            .site-footer-company {
+                width: 100%;
+                text-align: center;
+                padding: 9px 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                user-select: none;
+            }
+            .site-footer-company::after {
+                content: '\25be';
+                font-size: 10px;
+                opacity: 0.6;
+                transition: transform 0.25s;
+                display: inline-block;
+            }
+            .site-footer.expanded .site-footer-company::after {
+                transform: rotate(180deg);
+            }
+            .site-footer-links {
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 16px 12px;
+                width: 100%;
+                border-top: 1px solid rgba(255,255,255,0.08);
+            }
+            .site-footer.expanded .site-footer-links {
+                display: flex;
+            }
+            .site-footer-links a { font-size: 12px; }
         }
 
         /* Mobile Responsive */
@@ -1439,7 +1477,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="site-footer">
+    <footer class="site-footer" id="siteFooter">
         <div class="site-footer-company">ООО «Глобал Дент Университет» &middot; ИНН 7453346120</div>
         <nav class="site-footer-links">
             <a href="/docs/oferta" target="_blank">Публичная оферта</a>
@@ -1450,6 +1488,18 @@
     </footer>
 
     <script>
+        // Collapsible footer (mobile only)
+        (function() {
+            const footer = document.getElementById('siteFooter');
+            if (!footer) return;
+            footer.addEventListener('click', function(e) {
+                // Only toggle on mobile; ignore clicks on links themselves
+                if (window.innerWidth > 768) return;
+                if (e.target.tagName === 'A') return;
+                footer.classList.toggle('expanded');
+            });
+        })();
+
         // Fix mobile viewport height
         function setVH() {
             const vh = window.visualViewport
