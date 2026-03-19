@@ -55,12 +55,14 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 import re as _re
 
 def _clean_llm_response(text: str) -> str:
-    """Strip markdown heading markers that LLM sometimes adds despite the system prompt."""
-    # '### Заголовок' -> 'Заголовок', '## ...' -> '...', '# ...' -> '...'
+    """Strip markdown heading markers and raw HTML tags that LLM sometimes adds."""
+    # '### Заголовок' -> 'Заголовок'
     text = _re.sub(r'^#{1,6}\s+', '', text, flags=_re.MULTILINE)
-    # Remove lone '---' dividers that sometimes appear
+    # Strip raw HTML tags: <b>, </b>, <i>, </i>, <br>, etc.
+    text = _re.sub(r'</?(?:b|i|em|strong|u|br|p|div|span)[^>]*>', '', text, flags=_re.IGNORECASE)
+    # Remove lone '---' dividers
     text = _re.sub(r'^---+\s*$', '', text, flags=_re.MULTILINE)
-    # Collapse 3+ consecutive blank lines to 2
+    # Collapse 3+ blank lines to 2
     text = _re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 

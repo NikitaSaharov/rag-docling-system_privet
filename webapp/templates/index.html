@@ -1853,6 +1853,14 @@
             function escapeHtml(str) {
                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             }
+            // Инлайн разметка: *** ** * → <strong>/<em>
+            function inlineFmt(str) {
+                str = escapeHtml(str);
+                str = str.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+                str = str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                str = str.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+                return str;
+            }
             
             const lines = text.split('\n');
             const result = [];
@@ -1879,7 +1887,7 @@
                         const headerCells = tableLines[0].split('|').filter(c => c.trim() !== '');
                         html += '<thead><tr>';
                         for (const cell of headerCells) {
-                            html += '<th>' + escapeHtml(cell.trim()) + '</th>';
+                            html += '<th>' + inlineFmt(cell.trim()) + '</th>';
                         }
                         html += '</tr></thead>';
                         
@@ -1889,7 +1897,7 @@
                             const cells = tableLines[r].split('|').filter(c => c.trim() !== '');
                             html += '<tr>';
                             for (const cell of cells) {
-                                html += '<td>' + escapeHtml(cell.trim()) + '</td>';
+                                html += '<td>' + inlineFmt(cell.trim()) + '</td>';
                             }
                             html += '</tr>';
                         }
@@ -1899,10 +1907,8 @@
                     continue;
                 }
                 
-                // Обычная строка - экранируем и обрабатываем **жирный**
-                let escaped = escapeHtml(line);
-                escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                result.push(escaped);
+                // Обычная строка
+                result.push(inlineFmt(line));
                 i++;
             }
             
