@@ -115,6 +115,7 @@
         .messages-container {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 24px;
             min-height: 0;
             -webkit-overflow-scrolling: touch;
@@ -156,6 +157,7 @@
         .message-content {
             flex: 1;
             max-width: 800px;
+            min-width: 0; /* prevent flex child from overflowing */
         }
         
         .message-text {
@@ -163,6 +165,9 @@
             line-height: 1.6;
             font-size: 15px;
             white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
         }
         
         /* Таблицы в сообщениях */
@@ -205,11 +210,13 @@
             -webkit-overflow-scrolling: touch;
             margin: 12px 0;
             white-space: normal;
+            max-width: 100%;
         }
         
         .table-scroll-wrapper table {
             margin: 0;
             min-width: 300px;
+            white-space: nowrap; /* keep columns on one line, scroll wrapper handles overflow */
         }
         
         .sources {
