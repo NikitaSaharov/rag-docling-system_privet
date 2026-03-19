@@ -1547,6 +1547,47 @@ def list_documents():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# === Юридические документы ===
+_DOCS_DIR = os.path.join(os.path.dirname(__file__), 'docs_text')
+
+_DOC_FILES = {
+    'oferta':             'Оферта Global Dent Университет.txt',
+    'privacy':            'Политика обработки персональных данных.txt',
+    'consent-data':       'Согласие на ОПД .txt',
+    'consent-newsletter': 'Согласие на рассылку .txt',
+}
+
+_DOC_TITLES = {
+    'oferta':             'Оферта',
+    'privacy':            'Политика обработки персональных данных',
+    'consent-data':       'Согласие на обработку персональных данных',
+    'consent-newsletter': 'Согласие на рассылку',
+}
+
+def _load_doc(key):
+    path = os.path.join(_DOCS_DIR, _DOC_FILES[key])
+    try:
+        with open(path, encoding='utf-8') as f:
+            return f.read()
+    except Exception:
+        return ''
+
+@app.route('/docs/oferta')
+def doc_oferta():
+    return render_template('doc_page.html', title=_DOC_TITLES['oferta'], content=_load_doc('oferta'))
+
+@app.route('/docs/privacy')
+def doc_privacy():
+    return render_template('doc_page.html', title=_DOC_TITLES['privacy'], content=_load_doc('privacy'))
+
+@app.route('/docs/consent-data')
+def doc_consent_data():
+    return render_template('doc_page.html', title=_DOC_TITLES['consent-data'], content=_load_doc('consent-data'))
+
+@app.route('/docs/consent-newsletter')
+def doc_consent_newsletter():
+    return render_template('doc_page.html', title=_DOC_TITLES['consent-newsletter'], content=_load_doc('consent-newsletter'))
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
