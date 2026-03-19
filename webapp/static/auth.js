@@ -3,6 +3,14 @@ let currentUser = null;
 let authToken = null;
 let currentSessionId = null;
 let sessions = [];
+let authRequired = false; // true пока пользователь не авторизован
+
+// Модалки, которые считаются частью auth-флоу (закрытие любой из них
+// при authRequired=true перенаправит обратно на loginModal)
+const AUTH_FLOW_MODALS = [
+    'loginModal', 'registerModal', 'verifyEmailModal',
+    'forgotPasswordModal', 'verifyResetCodeModal', 'resetPasswordModal'
+];
 
 // Инициализация при загрузке страницы
 // Проверяем состояние DOM - если скрипт загружен после DOMContentLoaded,
@@ -52,11 +60,16 @@ function initAuth() {
 }
 
 function showAuthenticatedUI() {
+    authRequired = false;
+    // Restore close buttons on auth modals
+    ['loginModal', 'registerModal'].forEach(id => {
+        const btn = document.getElementById(id)?.querySelector('.modal-close');
+        if (btn) btn.style.display = '';
+    });
     // Sidebar
     document.getElementById('sidebarUserInfo').style.display = 'block';
     document.getElementById('sidebarUserEmail').textContent = currentUser.email;
     document.getElementById('sidebarAuthSection').style.display = 'none';
-    
     // На десктопе показываем sidebar
     if (window.innerWidth > 768) {
         document.getElementById('sidebar').classList.remove('mobile-hidden');
@@ -64,12 +77,19 @@ function showAuthenticatedUI() {
 }
 
 function showUnauthenticatedUI() {
+    authRequired = true;
+    // Hide close (×) buttons — modal cannot be dismissed without auth
+    ['loginModal', 'registerModal'].forEach(id => {
+        const btn = document.getElementById(id)?.querySelector('.modal-close');
+        if (btn) btn.style.display = 'none';
+    });
     // Sidebar
     document.getElementById('sidebarUserInfo').style.display = 'none';
     document.getElementById('sidebarAuthSection').style.display = 'block';
-    
     // Скрываем sidebar
     document.getElementById('sidebar').classList.add('mobile-hidden');
+    // Принудительно показываем окно входа
+    showModal('loginModal');
 }
 
 function logout() {
@@ -142,6 +162,15 @@ function showModal(modalId) {
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
     clearModalErrors(modalId);
+    // Если авторизация обязательна — не даём закрыть auth-флоу без входа
+    if (authRequired) {
+        setTimeout(() => {
+            const anyVisible = AUTH_FLOW_MODALS.some(
+                id => document.getElementById(id)?.classList.contains('active')
+            );
+            if (!anyVisible) showModal('loginModal');
+        }, 0);
+    }
 }
 
 function closeAllModals() {
@@ -237,8 +266,8 @@ async function handleLogin(e) {
         localStorage.setItem('auth_token', authToken);
         currentUser = data.user;
         
+        showAuthenticatedUI(); // сначала сбрасываем authRequired
         closeAllModals();
-        showAuthenticatedUI();
         loadSessions();
     } catch (error) {
         showModalError('loginModal', error.message);
@@ -339,8 +368,8 @@ async function handleVerifyEmail(e) {
         localStorage.setItem('auth_token', authToken);
         currentUser = data.user;
         
+        showAuthenticatedUI(); // сначала сбрасываем authRequired
         closeAllModals();
-        showAuthenticatedUI();
         loadSessions();
     } catch (error) {
         showModalError('verifyEmailModal', error.message);
